@@ -1,0 +1,5 @@
+{
+  "editor.defaultFormatter": null,
+  "python.formatting.provider": "black",
+  "python.formatting.blackPath": "/home/chris_wise/.local/bin/black"
+}
