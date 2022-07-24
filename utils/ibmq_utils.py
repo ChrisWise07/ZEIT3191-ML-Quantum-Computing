@@ -1,9 +1,10 @@
 from qiskit import IBMQ
+from typing import Any
 
 
 def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
     num_required_qubits: int = 5,
-) -> str:
+) -> Any:
     """
     Find IBMQ provider with required number of qubits and the shortest
     queue.
@@ -12,7 +13,7 @@ def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
         Name of IBMQ provider with the shortest queue.
     """
     shortest_queue_length = float("inf")
-    provider_with_shortest_queue_name = None
+    backend_with_shortest_queue = None
 
     IBMQ.load_account()
 
@@ -29,6 +30,7 @@ def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
             queue_length = backend.status().pending_jobs
             if queue_length < shortest_queue_length:
                 shortest_queue_length = queue_length
-                provider_with_shortest_queue_name = backend.name()
+                backend_with_shortest_queue = backend
 
-    return provider_with_shortest_queue_name
+    print(type(backend_with_shortest_queue))
+    return backend_with_shortest_queue

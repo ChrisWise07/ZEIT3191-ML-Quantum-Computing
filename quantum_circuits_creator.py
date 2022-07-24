@@ -26,7 +26,7 @@ def return_initial_quantum_circuit(
     return QuantumCircuit(num_qubits, num_classical_bits)
 
 
-def noisy_cnot(
+def simulated_entangled_noisy_cnot(
     noise_probability_for_gates: Dict[str, float]
 ) -> QuantumCircuit:
     """
@@ -81,3 +81,24 @@ def apply_noise_to_circuit(
     """
     if random() < noise_probability:
         circuit.append(gate, qubit_ids)
+
+
+def entangled_cnot() -> QuantumCircuit:
+    """
+    Returns a circuit with CNOT gate
+
+    Args:
+        noise_probability:
+            The probability of performing a bit flip after each gate is
+            applied
+
+    Returns:
+        A quantum circuit with a noisy CNOT gate.
+    """
+    circuit = return_initial_quantum_circuit(
+        num_qubits=2, num_classical_bits=2
+    )
+    circuit.h(0)
+    circuit.cx(0, 1)
+    circuit.measure([0, 1], [0, 1])
+    return circuit
