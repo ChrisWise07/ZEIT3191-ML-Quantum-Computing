@@ -4,6 +4,9 @@ from random import random
 from qiskit.circuit import Gate
 from qiskit.circuit.library import ZGate, XGate
 
+ZGATE = ZGate()
+XGATE = XGate()
+
 
 def return_initial_quantum_circuit(
     num_qubits: int, num_classical_bits: int
@@ -42,14 +45,14 @@ def noisy_cnot(
     )
     circuit.h(0)
     apply_noise_to_circuit(
-        circuit, [0], ZGate(), noise_probability_for_gates["h"]
+        circuit, [0], ZGATE, noise_probability_for_gates["h"]
     )
     circuit.cx(0, 1)
     apply_noise_to_circuit(
-        circuit, [0], ZGate(), noise_probability_for_gates["cx"]
+        circuit, [0], ZGATE, noise_probability_for_gates["cx"]
     )
     apply_noise_to_circuit(
-        circuit, [1], XGate(), noise_probability_for_gates["cx"]
+        circuit, [1], XGATE, noise_probability_for_gates["cx"]
     )
     circuit.measure([0, 1], [0, 1])
     return circuit
