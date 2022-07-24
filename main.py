@@ -1,31 +1,20 @@
-import qiskit as q
-from qiskit import IBMQ
-from qiskit.tools.monitor import job_monitor
-from qiskit.visualization import plot_histogram
+from qiskit import execute, Aer
+import matplotlib.pyplot as plt
 
-circuit = q.QuantumCircuit(2, 2)
-circuit.h(0)
-circuit.cx(0, 1)
-circuit.measure([0, 1], [0, 1])
+from quantum_circuits_creator import noisy_cnot
 
-IBMQ.load_account()
+if __name__ == "__main__":
+    counts = {"00": 0, "01": 0, "10": 0, "11": 0}
+    backend = Aer.get_backend("qasm_simulator")
 
-provider = IBMQ.get_provider("ibm-q")
+    for i in range(500):
+        circuit = noisy_cnot({"h": 0.1, "cx": 0.1})
+        counts[
+            execute(circuit, backend=backend, shots=1)
+            .result()
+            .get_counts(circuit)
+            .most_frequent()
+        ] += 1
 
-for backend in provider.backends():
-    try:
-        qubit_count = len(backend.properties().qubits)
-    except:
-        qubit_count = "simulated"
-
-    print(
-        f"{backend.name()} has {backend.status().pending_jobs} queued and {qubit_count} qubits"
-    )
-
-backend = provider.get_backend("ibmq_manila")
-job = q.execute(circuit, backend=backend, shots=500)
-job_monitor(job)
-
-result = job.result()
-counts = result.get_counts(circuit)
-print(counts)
+    plt.bar(list(counts.keys()), counts.values(), color="g")
+    plt.savefig("noise_probability_test.png")
