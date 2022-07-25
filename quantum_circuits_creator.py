@@ -87,11 +87,6 @@ def entangled_cnot() -> QuantumCircuit:
     """
     Returns a circuit with CNOT gate
 
-    Args:
-        noise_probability:
-            The probability of performing a bit flip after each gate is
-            applied
-
     Returns:
         A quantum circuit with a noisy CNOT gate.
     """

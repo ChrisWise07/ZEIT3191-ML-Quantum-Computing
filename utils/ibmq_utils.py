@@ -32,5 +32,4 @@ def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
                 shortest_queue_length = queue_length
                 backend_with_shortest_queue = backend
 
-    print(type(backend_with_shortest_queue))
     return backend_with_shortest_queue

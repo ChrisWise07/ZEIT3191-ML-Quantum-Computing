@@ -14,6 +14,12 @@ from utils.ibmq_utils import (
 from utils.general_utils import file_handler
 from json import dumps, load
 
+LIVE_QC_KET_DISTRIBUTIONS = file_handler(
+    path="entangled_cnot_results.txt",
+    mode="r",
+    func=lambda f: load(f),
+)
+
 
 def plot_ket_distribution(ket_distribution: dict) -> None:
     """
@@ -52,10 +58,13 @@ def execute_circuit_record_result(
     )
 
 
-def simulate_entangled_cnot() -> Dict:
+def simulate_entangled_cnot(noise_percentage: float) -> Dict:
     """
     Simulates the entangled CNOT gate and returns the resulting ket
     distribution.
+
+    Args:
+
 
     Returns:
         The ket distribution of the entangled CNOT gate.
@@ -63,14 +72,16 @@ def simulate_entangled_cnot() -> Dict:
     return Counter(
         [
             execute_circuit_record_result(
-                simulated_entangled_noisy_cnot({"h": 0.0, "cx": 0.0595})
+                simulated_entangled_noisy_cnot(
+                    {"h": 0.0, "cx": noise_percentage}
+                )
             )
             for _ in range(2000)
         ]
     )
 
 
-def record_results_from_circuit_on_live_qc_(circuit: QuantumCircuit):
+def record_results_from_circuit_on_live_qc(circuit: QuantumCircuit):
     """
     Records the results of the given circuit on a live IBMQ quantum
     computer.
@@ -81,7 +92,7 @@ def record_results_from_circuit_on_live_qc_(circuit: QuantumCircuit):
     job = execute(
         circuit,
         backend=find_ibmq_provider_with_enough_qubits_and_shortest_queue(),
-        shots=2000,
+        shots=10000,
     )
     job_monitor(job)
 
@@ -119,24 +130,34 @@ def calculate_chi_squared_statistic_between_ket_distributions(
     return chi_squared_statistic
 
 
+def quantum_noise_optimisation_wrapper_function(
+    noise_percentage: float,
+) -> float:
+
+    return 100 / calculate_chi_squared_statistic_between_ket_distributions(
+        simulate_entangled_cnot(noise_percentage / 100),
+        LIVE_QC_KET_DISTRIBUTIONS,
+    )
+
+
 def main():
     """
     Main function.
     """
-    simulated_ket_distibution = simulate_entangled_cnot()
-    actual_ket_distribution = file_handler(
-        path="entangled_cnot_results.txt",
-        mode="r",
-        func=lambda f: load(f),
-    )
-    chi_squared_statistic = (
-        calculate_chi_squared_statistic_between_ket_distributions(
-            simulated_ket_distibution, actual_ket_distribution
-        )
-    )
-    print(chi_squared_statistic)
+    from bayes_opt import BayesianOptimization
 
-    plot_ket_distribution(simulated_ket_distibution)
+    optimiser = BayesianOptimization(
+        f=quantum_noise_optimisation_wrapper_function,
+        pbounds={"noise_percentage": (0.0, 100.0)},
+        random_state=1,
+    )
+
+    optimiser.maximize(
+        init_points=5,
+        n_iter=20,
+    )
+
+    print(optimiser.max)
 
 
 if __name__ == "__main__":
