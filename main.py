@@ -63,7 +63,7 @@ def simulate_entangled_cnot() -> Dict:
     return Counter(
         [
             execute_circuit_record_result(
-                simulated_entangled_noisy_cnot({"h": 0.1, "cx": 0.1})
+                simulated_entangled_noisy_cnot({"h": 0.0, "cx": 0.0595})
             )
             for _ in range(2000)
         ]
