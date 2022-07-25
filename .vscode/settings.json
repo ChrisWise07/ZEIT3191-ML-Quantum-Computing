@@ -1,7 +1,7 @@
 {
   "editor.defaultFormatter": null,
   "python.formatting.provider": "black",
-  "python.formatting.blackPath": "/usr/local/bin/black",
+  "python.formatting.blackPath": "/home/chris_wise/.local/bin/black",
   "python.formatting.blackArgs": ["--line-length", "79"],
-  // "/home/chris_wise/.local/bin/black"
+  // "/home/chris_wise/.local/bin/black" "/usr/local/bin/black"
 }

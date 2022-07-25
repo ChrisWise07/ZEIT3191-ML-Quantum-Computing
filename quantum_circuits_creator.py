@@ -1,11 +1,6 @@
-from typing import Dict
 from qiskit import QuantumCircuit
 from random import random
 from qiskit.circuit import Gate
-from qiskit.circuit.library import ZGate, XGate
-
-ZGATE = ZGate()
-XGATE = XGate()
 
 
 def return_initial_quantum_circuit(
@@ -27,7 +22,7 @@ def return_initial_quantum_circuit(
 
 
 def simulated_entangled_noisy_cnot(
-    noise_probability_for_gates: Dict[str, float]
+    theta: float, phi: float, lam: float
 ) -> QuantumCircuit:
     """
     Returns a circuit with a noisy CNOT gate.
@@ -44,16 +39,10 @@ def simulated_entangled_noisy_cnot(
         num_qubits=2, num_classical_bits=2
     )
     circuit.h(0)
-    apply_noise_to_circuit(
-        circuit, [0], ZGATE, noise_probability_for_gates["h"]
-    )
+    circuit.u(theta, phi, lam, 0)
     circuit.cx(0, 1)
-    apply_noise_to_circuit(
-        circuit, [0], ZGATE, noise_probability_for_gates["cx"]
-    )
-    apply_noise_to_circuit(
-        circuit, [1], XGATE, noise_probability_for_gates["cx"]
-    )
+    circuit.u(theta, phi, lam, 0)
+    circuit.u(theta, phi, lam, 1)
     circuit.measure([0, 1], [0, 1])
     return circuit
 
