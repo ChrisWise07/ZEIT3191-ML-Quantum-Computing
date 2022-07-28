@@ -11,17 +11,22 @@ from quantum_circuits_creator import (
 )
 from utils.ibmq_utils import (
     find_ibmq_provider_with_enough_qubits_and_shortest_queue,
+    return_objects_for_noisy_simulation,
 )
 from utils.general_utils import file_handler
 from json import dumps, load
 
 LIVE_QC_KET_DISTRIBUTIONS = file_handler(
-    path="entangled_cnot_results.txt",
+    path="entangled_cnot_results_clean.txt",
     mode="r",
     func=lambda f: load(f),
 )
 
 EPSILON = 0.000001
+
+NOISE_MODEL, COUPLING_MAP, BASIS_GATES = return_objects_for_noisy_simulation()
+
+SIMULATOR_BACKEND = Aer.get_backend("qasm_simulator")
 
 
 def plot_ket_distribution(ket_distribution: dict) -> None:
@@ -54,7 +59,14 @@ def execute_circuit_record_result(
         The result of the circuit.
     """
     return (
-        execute(circuit, backend=backend, shots=10000)
+        execute(
+            circuit,
+            backend=SIMULATOR_BACKEND,
+            coupling_map=COUPLING_MAP,
+            basis_gates=BASIS_GATES,
+            noise_model=NOISE_MODEL,
+            shots=10000,
+        )
         .result()
         .get_counts(circuit)
     )
@@ -126,7 +138,7 @@ def calculate_chi_squared_statistic_between_ket_distributions(
 
         chi_squared_statistic += (
             num_observed_ket_state - num_expected_ket_state
-        ) ** 2 / num_expected_ket_state
+        ) ** 2 / (num_expected_ket_state + EPSILON)
 
     return chi_squared_statistic
 
@@ -137,6 +149,20 @@ def quantum_noise_optimisation_wrapper_function(
 
     return -calculate_chi_squared_statistic_between_ket_distributions(
         simulate_entangled_cnot(theta, phi, lam), LIVE_QC_KET_DISTRIBUTIONS
+    )
+
+
+def print_circuit_to_file(circuit: QuantumCircuit):
+    """
+    Prints the given circuit to a file.
+
+    Args:
+        circuit: The circuit to print.
+    """
+    file_handler(
+        path="entangled_cnot_circuit.txt",
+        mode="w",
+        func=lambda f: f.write(circuit.draw(output="text")),
     )
 
 

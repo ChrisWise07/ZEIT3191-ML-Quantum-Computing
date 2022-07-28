@@ -1,5 +1,6 @@
 from qiskit import IBMQ
-from typing import Any
+from typing import Any, Tuple
+from qiskit.providers.aer.noise import NoiseModel
 
 
 def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
@@ -33,3 +34,23 @@ def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
                 backend_with_shortest_queue = backend
 
     return backend_with_shortest_queue
+
+
+def return_objects_for_noisy_simulation() -> Tuple[NoiseModel, dict, dict]:
+    """
+    Returns objects for noisy simulation.
+
+    Returns:
+        noise_model: The noise model to use.
+        coupling_map: The coupling map to use.
+        basis_gates: The basis gates to use.
+
+    """
+    backend = IBMQ.load_account().get_backend("ibm_nairobi")
+    noise_model = NoiseModel.from_backend(backend)
+
+    return (
+        noise_model,
+        backend.configuration().coupling_map,
+        noise_model.basis_gates,
+    )
