@@ -8,6 +8,7 @@ from math import pi
 from quantum_circuits_creator import (
     simulated_entangled_noisy_cnot,
     entangled_cnot,
+    clean_entangled_cnot,
 )
 from utils.ibmq_utils import (
     find_ibmq_provider_with_enough_qubits_and_shortest_queue,
@@ -45,9 +46,7 @@ def plot_ket_distribution(ket_distribution: dict) -> None:
     savefig("noise_probability_test.png")
 
 
-def execute_circuit_record_result(
-    circuit: QuantumCircuit, backend=Aer.get_backend("qasm_simulator")
-) -> dict:
+def execute_circuit_record_result(circuit: QuantumCircuit) -> dict:
     """
     Executes the given circuit and returns the result.
 
@@ -58,6 +57,12 @@ def execute_circuit_record_result(
     Returns:
         The result of the circuit.
     """
+    # redfine noise model here
+    # noise_model = NoiseModel()
+    # noise_model.add_all_qubit_quantum_error(iswap_error, 'iswap')
+    # noise_model.add_basis_gates(['unitary'])
+    # print(noise_model.basis_gates)
+
     return (
         execute(
             circuit,
@@ -104,7 +109,7 @@ def record_results_from_circuit_on_live_qc(circuit: QuantumCircuit):
     job_monitor(job)
 
     file_handler(
-        path="entangled_cnot_results.txt",
+        path="entangled_cnot_results_clean.txt",
         mode="w",
         func=lambda f: f.write(
             dumps(job.result().get_counts(circuit), indent=4)
@@ -143,11 +148,41 @@ def calculate_chi_squared_statistic_between_ket_distributions(
     return chi_squared_statistic
 
 
+def calculate_total_variation_distance_between_ket_distributions(
+    observed_ket_distribution: dict, expected_ket_distribution: dict
+) -> float:
+    """
+    Calculates the chi squared statistic between the given ket
+    distributions.
+
+    Args:
+        ket_distribution_1:
+            A dictionary mapping ket states to their frequency.
+        ket_distribution_2:
+            A dictionary mapping ket states to their frequency.
+
+    Returns:
+        The chi squared statistic between the given ket distributions.
+    """
+    tvd = 0
+    for ket_state in expected_ket_distribution:
+        num_observed_ket_state = observed_ket_distribution.get(ket_state)
+
+        if num_observed_ket_state is None:
+            num_observed_ket_state = 0
+
+        tvd += abs(
+            expected_ket_distribution.get(ket_state) - num_observed_ket_state
+        )
+
+    return 0.5 * tvd
+
+
 def quantum_noise_optimisation_wrapper_function(
     theta: float, phi: float, lam: float
 ) -> float:
 
-    return -calculate_chi_squared_statistic_between_ket_distributions(
+    return -calculate_total_variation_distance_between_ket_distributions(
         simulate_entangled_cnot(theta, phi, lam), LIVE_QC_KET_DISTRIBUTIONS
     )
 
@@ -166,9 +201,9 @@ def print_circuit_to_file(circuit: QuantumCircuit):
     )
 
 
-def main():
+def optimise_noise_parameters():
     """
-    Main function.
+    Optimises the noise parameters.
     """
     from bayes_opt import BayesianOptimization
 
@@ -188,6 +223,38 @@ def main():
     )
 
     print(optimiser.max)
+
+
+def optimise_euler_angles_to_minimise_noise():
+    """
+    Optimises the noise parameters.
+    """
+    from bayes_opt import BayesianOptimization
+
+    optimiser = BayesianOptimization(
+        f=quantum_noise_optimisation_wrapper_function,
+        pbounds={
+            "theta": (0, pi),
+            "phi": (0, 2 * pi - EPSILON),
+            "lam": (0, 2 * pi - EPSILON),
+        },
+        random_state=1,
+    )
+
+    optimiser.maximize(
+        init_points=250,
+        n_iter=500,
+    )
+
+    print(optimiser.max)
+
+
+def main():
+    """
+    Main function.
+    """
+    # optimise_noise_parameters()
+    optimise_euler_angles_to_minimise_noise()
 
 
 if __name__ == "__main__":

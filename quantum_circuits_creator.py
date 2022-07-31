@@ -39,7 +39,7 @@ def simulated_entangled_noisy_cnot(
         num_qubits=2, num_classical_bits=2
     )
     circuit.h(0)
-    circuit.u(theta, phi, lam, 0)
+    circuit.u(theta, phi, lam, 0).inverse()
     circuit.cx(0, 1)
     circuit.u(theta, phi, lam, 0)
     circuit.u(theta, phi, lam, 1)
@@ -84,5 +84,26 @@ def entangled_cnot() -> QuantumCircuit:
     )
     circuit.h(0)
     circuit.cx(0, 1)
+    circuit.measure([0, 1], [0, 1])
+    return circuit
+
+
+def clean_entangled_cnot(
+    theta: float, phi: float, lam: float
+) -> QuantumCircuit:
+    """
+    Returns a circuit with CNOT gate
+
+    Returns:
+        A quantum circuit with a clean CNOT gate.
+    """
+    circuit = return_initial_quantum_circuit(
+        num_qubits=2, num_classical_bits=2
+    )
+    circuit.h(0)
+    circuit.u(theta, phi, lam, 0).inverse()
+    circuit.cx(0, 1)
+    circuit.u(theta, phi, lam, 0).inverse()
+    circuit.u(theta, phi, lam, 1).inverse()
     circuit.measure([0, 1], [0, 1])
     return circuit
