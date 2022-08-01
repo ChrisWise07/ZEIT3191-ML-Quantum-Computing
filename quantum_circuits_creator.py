@@ -39,10 +39,34 @@ def simulated_entangled_noisy_cnot(
         num_qubits=2, num_classical_bits=2
     )
     circuit.h(0)
-    circuit.u(theta, phi, lam, 0).inverse()
+    circuit.u(theta, phi, lam, 0)
     circuit.cx(0, 1)
     circuit.u(theta, phi, lam, 0)
     circuit.u(theta, phi, lam, 1)
+    circuit.measure([0, 1], [0, 1])
+    return circuit
+
+
+def unitary_defined_entangled_cnot(
+    theta: float, phi: float, lam: float
+) -> QuantumCircuit:
+    """
+    Returns a quantum circuit with a entangled CNOT gate defined by the
+    angles.
+
+    Args:
+        theta: The angle of the first rotation.
+        phi: The angle of the second rotation.
+        lam: The angle of the third rotation.
+
+    Returns:
+        A quantum circuit with a entangled CNOT gate defined by the angles.
+    """
+    circuit = return_initial_quantum_circuit(
+        num_qubits=2, num_classical_bits=2
+    )
+    circuit.u(theta, phi, lam, 0)
+    circuit.cx(0, 1)
     circuit.measure([0, 1], [0, 1])
     return circuit
 

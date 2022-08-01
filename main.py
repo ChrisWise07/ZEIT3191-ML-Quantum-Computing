@@ -1,5 +1,6 @@
 from collections import Counter
-from typing import Dict
+import json
+from typing import Callable, Dict, Tuple
 from qiskit import execute, Aer
 from qiskit.circuit import QuantumCircuit
 from matplotlib.pyplot import bar, savefig
@@ -9,6 +10,7 @@ from quantum_circuits_creator import (
     simulated_entangled_noisy_cnot,
     entangled_cnot,
     clean_entangled_cnot,
+    unitary_defined_entangled_cnot,
 )
 from utils.ibmq_utils import (
     find_ibmq_provider_with_enough_qubits_and_shortest_queue,
@@ -18,6 +20,12 @@ from utils.general_utils import file_handler
 from json import dumps, load
 
 LIVE_QC_KET_DISTRIBUTIONS = file_handler(
+    path="entangled_cnot_results.txt",
+    mode="r",
+    func=lambda f: load(f),
+)
+
+LIVE_QC_CLEAN_KET_DISTRIBUTIONS = file_handler(
     path="entangled_cnot_results_clean.txt",
     mode="r",
     func=lambda f: load(f),
@@ -38,15 +46,16 @@ def plot_ket_distribution(ket_distribution: dict) -> None:
         ket_distribution:
             A dictionary mapping ket states to their frequency.
     """
+    print(ket_distribution)
     bar(
         list(ket_distribution.keys()),
         list(ket_distribution.values()),
         color="blue",
     )
-    savefig("noise_probability_test.png")
+    savefig("noise_probability_test_custom_ugate.png")
 
 
-def execute_circuit_record_result(circuit: QuantumCircuit) -> dict:
+def return_results_of_noisy_circuit_execution(circuit: QuantumCircuit) -> dict:
     """
     Executes the given circuit and returns the result.
 
@@ -77,7 +86,35 @@ def execute_circuit_record_result(circuit: QuantumCircuit) -> dict:
     )
 
 
-def simulate_entangled_cnot(theta: float, phi: float, lam: float) -> Dict:
+def return_results_of_clean_circuit_execution(circuit: QuantumCircuit) -> dict:
+    """
+    Executes the given circuit and returns the result.
+
+    Args:
+        circuit: The circuit to execute.
+        backend: The backend to use.
+
+    Returns:
+        The result of the circuit.
+    """
+    return (
+        execute(
+            circuit,
+            backend=SIMULATOR_BACKEND,
+            shots=10000,
+        )
+        .result()
+        .get_counts(circuit)
+    )
+
+
+def simulate_circuit(
+    theta: float,
+    phi: float,
+    lam: float,
+    execution_function: Callable,
+    circuit_creator: Callable,
+) -> Dict:
     """
     Simulates the entangled CNOT gate and returns the resulting ket
     distribution.
@@ -88,9 +125,7 @@ def simulate_entangled_cnot(theta: float, phi: float, lam: float) -> Dict:
     Returns:
         The ket distribution of the entangled CNOT gate.
     """
-    return execute_circuit_record_result(
-        simulated_entangled_noisy_cnot(theta, phi, lam)
-    )
+    return execution_function(circuit_creator(theta, phi, lam))
 
 
 def record_results_from_circuit_on_live_qc(circuit: QuantumCircuit):
@@ -103,13 +138,17 @@ def record_results_from_circuit_on_live_qc(circuit: QuantumCircuit):
     """
     job = execute(
         circuit,
-        backend=find_ibmq_provider_with_enough_qubits_and_shortest_queue(),
+        backend=find_ibmq_provider_with_enough_qubits_and_shortest_queue(
+            num_required_qubits=2
+        ),
         shots=10000,
     )
     job_monitor(job)
 
+    print(job.result().get_counts(circuit))
+
     file_handler(
-        path="entangled_cnot_results_clean.txt",
+        path="entangled_cnot_results_learnt_gate.txt",
         mode="w",
         func=lambda f: f.write(
             dumps(job.result().get_counts(circuit), indent=4)
@@ -170,7 +209,6 @@ def calculate_total_variation_distance_between_ket_distributions(
 
         if num_observed_ket_state is None:
             num_observed_ket_state = 0
-
         tvd += abs(
             expected_ket_distribution.get(ket_state) - num_observed_ket_state
         )
@@ -184,6 +222,22 @@ def quantum_noise_optimisation_wrapper_function(
 
     return -calculate_total_variation_distance_between_ket_distributions(
         simulate_entangled_cnot(theta, phi, lam), LIVE_QC_KET_DISTRIBUTIONS
+    )
+
+
+def optimise_hgate_wrapper_function(
+    theta: float, phi: float, lam: float
+) -> float:
+
+    return -calculate_total_variation_distance_between_ket_distributions(
+        simulate_circuit(
+            theta,
+            phi,
+            lam,
+            return_results_of_clean_circuit_execution,
+            unitary_defined_entangled_cnot,
+        ),
+        LIVE_QC_CLEAN_KET_DISTRIBUTIONS,
     )
 
 
@@ -201,14 +255,16 @@ def print_circuit_to_file(circuit: QuantumCircuit):
     )
 
 
-def optimise_noise_parameters():
+def optimise_euler_angles(
+    wrapper_function: Callable,
+) -> Tuple[float, float, float]:
     """
     Optimises the noise parameters.
     """
     from bayes_opt import BayesianOptimization
 
     optimiser = BayesianOptimization(
-        f=quantum_noise_optimisation_wrapper_function,
+        f=wrapper_function,
         pbounds={
             "theta": (0, pi),
             "phi": (0, 2 * pi - EPSILON),
@@ -218,43 +274,29 @@ def optimise_noise_parameters():
     )
 
     optimiser.maximize(
-        init_points=250,
-        n_iter=500,
+        init_points=100,
+        n_iter=400,
     )
 
-    print(optimiser.max)
-
-
-def optimise_euler_angles_to_minimise_noise():
-    """
-    Optimises the noise parameters.
-    """
-    from bayes_opt import BayesianOptimization
-
-    optimiser = BayesianOptimization(
-        f=quantum_noise_optimisation_wrapper_function,
-        pbounds={
-            "theta": (0, pi),
-            "phi": (0, 2 * pi - EPSILON),
-            "lam": (0, 2 * pi - EPSILON),
-        },
-        random_state=1,
-    )
-
-    optimiser.maximize(
-        init_points=250,
-        n_iter=500,
-    )
-
-    print(optimiser.max)
+    return optimiser.max
 
 
 def main():
     """
     Main function.
     """
-    # optimise_noise_parameters()
-    optimise_euler_angles_to_minimise_noise()
+    # results = optimise_euler_angles(optimise_hgate_wrapper_function)
+    # print(results)
+    # record_results_from_circuit_on_live_qc(
+    #     unitary_defined_entangled_cnot(**results["params"])
+    # )
+    plot_ket_distribution(
+        file_handler(
+            path="entangled_cnot_results_learnt_gate.txt",
+            mode="r",
+            func=lambda f: load(f),
+        )
+    )
 
 
 if __name__ == "__main__":
