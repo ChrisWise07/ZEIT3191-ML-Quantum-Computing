@@ -1,7 +1,5 @@
-from collections import Counter
-import json
-from typing import Callable, Dict, Tuple
-from qiskit import execute, Aer
+from typing import Callable, Dict, List, Tuple
+from qiskit import execute, IBMQ, transpile
 from qiskit.circuit import QuantumCircuit
 from matplotlib.pyplot import bar, savefig
 from qiskit.tools.monitor import job_monitor
@@ -12,12 +10,12 @@ from quantum_circuits_creator import (
     clean_entangled_cnot,
     unitary_defined_entangled_cnot,
 )
-from utils.ibmq_utils import (
-    find_ibmq_provider_with_enough_qubits_and_shortest_queue,
-    return_objects_for_noisy_simulation,
-)
+
 from utils.general_utils import file_handler
 from json import dumps, load
+from utils.ibmq_utils import return_live_and_fake_backend_with_shortest_queue
+from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
+
 
 LIVE_QC_KET_DISTRIBUTIONS = file_handler(
     path="entangled_cnot_results.txt",
@@ -33,9 +31,13 @@ LIVE_QC_CLEAN_KET_DISTRIBUTIONS = file_handler(
 
 EPSILON = 0.000001
 
-NOISE_MODEL, COUPLING_MAP, BASIS_GATES = return_objects_for_noisy_simulation()
+SIMULATED_NOISE_OBJECTS = {
+    "noise_model": None,
+    "coupling_map": None,
+    "basis_gates": None,
+}
 
-SIMULATOR_BACKEND = Aer.get_backend("qasm_simulator")
+SIMULATOR = []  # type: List[AerSimulator]
 
 
 def plot_ket_distribution(ket_distribution: dict) -> None:
@@ -66,23 +68,13 @@ def return_results_of_noisy_circuit_execution(circuit: QuantumCircuit) -> dict:
     Returns:
         The result of the circuit.
     """
-    # redfine noise model here
-    # noise_model = NoiseModel()
-    # noise_model.add_all_qubit_quantum_error(iswap_error, 'iswap')
-    # noise_model.add_basis_gates(['unitary'])
-    # print(noise_model.basis_gates)
 
+    # Execute noisy simulation and get counts
     return (
-        execute(
-            circuit,
-            backend=SIMULATOR_BACKEND,
-            coupling_map=COUPLING_MAP,
-            basis_gates=BASIS_GATES,
-            noise_model=NOISE_MODEL,
-            shots=10000,
-        )
+        SIMULATOR[0]
+        .run(transpile(circuit, SIMULATOR[0]), shots=10000)
         .result()
-        .get_counts(circuit)
+        .get_counts(0)
     )
 
 
@@ -128,27 +120,31 @@ def simulate_circuit(
     return execution_function(circuit_creator(theta, phi, lam))
 
 
-def record_results_from_circuit_on_live_qc(circuit: QuantumCircuit):
+def record_results_from_circuit_on_live_qc(
+    circuit: QuantumCircuit, backend: IBMQBackend = None, filename: str = None
+):
     """
     Records the results of the given circuit on a live IBMQ quantum
     computer.
 
     Args:
         circuit: The circuit to execute.
+        backend_name: The name of the backend to use.
     """
+    # if backend_name is None:
+    #     backend_name = (
+    #         find_ibmq_provider_with_enough_qubits_and_shortest_queue()
+    #     )
+
     job = execute(
         circuit,
-        backend=find_ibmq_provider_with_enough_qubits_and_shortest_queue(
-            num_required_qubits=2
-        ),
+        backend=backend,
         shots=10000,
     )
     job_monitor(job)
 
-    print(job.result().get_counts(circuit))
-
     file_handler(
-        path="entangled_cnot_results_learnt_gate.txt",
+        path=filename,
         mode="w",
         func=lambda f: f.write(
             dumps(job.result().get_counts(circuit), indent=4)
@@ -203,26 +199,20 @@ def calculate_total_variation_distance_between_ket_distributions(
     Returns:
         The chi squared statistic between the given ket distributions.
     """
+    weights = {"00": 1.0, "01": 1.0, "10": 1.0, "11": 1.0}
+
     tvd = 0
     for ket_state in expected_ket_distribution:
         num_observed_ket_state = observed_ket_distribution.get(ket_state)
+        ket_weight = weights.get(ket_state)
 
         if num_observed_ket_state is None:
             num_observed_ket_state = 0
-        tvd += abs(
+        tvd += ket_weight * abs(
             expected_ket_distribution.get(ket_state) - num_observed_ket_state
         )
 
     return 0.5 * tvd
-
-
-def quantum_noise_optimisation_wrapper_function(
-    theta: float, phi: float, lam: float
-) -> float:
-
-    return -calculate_total_variation_distance_between_ket_distributions(
-        simulate_entangled_cnot(theta, phi, lam), LIVE_QC_KET_DISTRIBUTIONS
-    )
 
 
 def optimise_hgate_wrapper_function(
@@ -235,6 +225,22 @@ def optimise_hgate_wrapper_function(
             phi,
             lam,
             return_results_of_clean_circuit_execution,
+            unitary_defined_entangled_cnot,
+        ),
+        LIVE_QC_CLEAN_KET_DISTRIBUTIONS,
+    )
+
+
+def optimise_hgate_with_noise_wrapper_function(
+    theta: float, phi: float, lam: float
+) -> float:
+
+    return -calculate_total_variation_distance_between_ket_distributions(
+        simulate_circuit(
+            theta,
+            phi,
+            lam,
+            return_results_of_noisy_circuit_execution,
             unitary_defined_entangled_cnot,
         ),
         LIVE_QC_CLEAN_KET_DISTRIBUTIONS,
@@ -271,11 +277,12 @@ def optimise_euler_angles(
             "lam": (0, 2 * pi - EPSILON),
         },
         random_state=1,
+        verbose=1,
     )
 
     optimiser.maximize(
-        init_points=100,
-        n_iter=400,
+        init_points=300,
+        n_iter=300,
     )
 
     return optimiser.max
@@ -285,17 +292,22 @@ def main():
     """
     Main function.
     """
-    # results = optimise_euler_angles(optimise_hgate_wrapper_function)
-    # print(results)
-    # record_results_from_circuit_on_live_qc(
-    #     unitary_defined_entangled_cnot(**results["params"])
-    # )
-    plot_ket_distribution(
-        file_handler(
-            path="entangled_cnot_results_learnt_gate.txt",
-            mode="r",
-            func=lambda f: load(f),
-        )
+    backend, fake_backend = return_live_and_fake_backend_with_shortest_queue(
+        num_required_qubits=2
+    )
+    print(backend.name())
+    print(fake_backend.name())
+
+    SIMULATOR.append(fake_backend)
+
+    results = optimise_euler_angles(optimise_hgate_with_noise_wrapper_function)
+
+    print(f"Final results: {results}")
+
+    record_results_from_circuit_on_live_qc(
+        unitary_defined_entangled_cnot(**results["params"]),
+        backend,
+        filename="entangled_cnot_results_learnt_gate_with_noise.txt",
     )
 
 
