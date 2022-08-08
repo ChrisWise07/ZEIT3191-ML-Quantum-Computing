@@ -1,6 +1,5 @@
-from qiskit import QuantumCircuit
-from random import random
-from qiskit.circuit import Gate
+from typing import Dict, Tuple
+from qiskit.circuit import QuantumCircuit, Parameter
 
 
 def return_initial_quantum_circuit(
@@ -21,113 +20,142 @@ def return_initial_quantum_circuit(
     return QuantumCircuit(num_qubits, num_classical_bits)
 
 
-def simulated_entangled_noisy_cnot(
-    theta: float, phi: float, lam: float
-) -> QuantumCircuit:
-    """
-    Returns a circuit with a noisy CNOT gate.
-
-    Args:
-        noise_probability:
-            The probability of performing a bit flip after each gate is
-            applied
-
-    Returns:
-        A quantum circuit with a noisy CNOT gate.
-    """
-    circuit = return_initial_quantum_circuit(
-        num_qubits=2, num_classical_bits=2
-    )
-    circuit.h(0)
-    circuit.u(theta, phi, lam, 0)
-    circuit.cx(0, 1)
-    circuit.u(theta, phi, lam, 0)
-    circuit.u(theta, phi, lam, 1)
-    circuit.measure([0, 1], [0, 1])
-    return circuit
-
-
 def unitary_defined_entangled_cnot(
-    theta: float, phi: float, lam: float
+    rotations: Dict[str, float] = {
+        "single_unitary_theta": 0,
+        "single_unitary_phi": 0,
+        "single_unitary_lam": 0,
+        "single_unitary_gamma": 0,
+        "controlled_unitary_theta": 0,
+        "controlled_unitary_phi": 0,
+        "controlled_unitary_lam": 0,
+        "controlled_unitary_gamma": 0,
+    },
+    rotation_errors: Dict[str, float] = {
+        "theta_error": 0,
+        "phi_error": 0,
+        "lam_error": 0,
+        "gamma_error": 0,
+    },
+    circuit_depth: int = 1,
 ) -> QuantumCircuit:
     """
-    Returns a quantum circuit with a entangled CNOT gate defined by the
-    angles.
+    Returns a two qubit circuit with a unitary gate followed by a
+    controled unitary gate, with the given rotations and rotation
+    errors, applied d times, where d is the circuit depth.
 
     Args:
-        theta: The angle of the first rotation.
-        phi: The angle of the second rotation.
-        lam: The angle of the third rotation.
+        rotations:
+            A dictionary of the form {
+                'single_unitary_theta': float,
+                'single_unitary_phi': float,
+                'single_unitary_lam': float,
+                'single_unitary_gamma': float,
+                'controlled_unitary_theta': float,
+                'controlled_unitary_phi': float,
+                'controlled_unitary_lam': float,
+                'controlled_unitary_gamma': float,
+            }
+        rotation_errors:
+            A dictionary of the form {
+                'theta_erorr': float,
+                'phi_error': float,
+                'lam_error': float,
+            }
+        circuit_depth:
+            The number of repetitions of the unitary gate.
 
     Returns:
-        A quantum circuit with a entangled CNOT gate defined by the angles.
+        A two qubit quantum circuit with the defined unitary gates
+        applied d times
+
     """
+    (
+        single_unitary_theta,
+        single_unitary_phi,
+        single_unitary_lam,
+        single_unitary_gamma,
+    ) = (
+        rotations["single_unitary_theta"],
+        rotations["single_unitary_phi"],
+        rotations["single_unitary_lam"],
+        rotations["single_unitary_gamma"],
+    )
+
+    (
+        controlled_unitary_theta,
+        controlled_unitary_phi,
+        controlled_unitary_lam,
+        controlled_unitary_gamma,
+    ) = (
+        rotations["controlled_unitary_theta"],
+        rotations["controlled_unitary_phi"],
+        rotations["controlled_unitary_lam"],
+        rotations["controlled_unitary_gamma"],
+    )
+
+    theta_error, phi_error, lam_error, gamma_error = (
+        rotation_errors["theta_error"],
+        rotation_errors["phi_error"],
+        rotation_errors["lam_error"],
+        rotation_errors["gamma_error"],
+    )
+
     circuit = return_initial_quantum_circuit(
         num_qubits=2, num_classical_bits=2
     )
-    circuit.u(theta, phi, lam, 0)
-    circuit.cx(0, 1)
+
+    for _ in range(circuit_depth):
+        circuit.u(
+            single_unitary_theta - theta_error,
+            single_unitary_phi - phi_error,
+            single_unitary_lam - lam_error,
+            0,
+        )
+        circuit.cu(
+            controlled_unitary_theta - theta_error,
+            controlled_unitary_phi - phi_error,
+            controlled_unitary_lam - lam_error,
+            controlled_unitary_gamma - gamma_error,
+            0,
+            1,
+        )
+
     circuit.measure([0, 1], [0, 1])
+
     return circuit
 
 
-def apply_noise_to_circuit(
-    circuit: QuantumCircuit,
-    qubit_ids: list,
-    gate: Gate,
-    noise_probability: float,
-) -> QuantumCircuit:
+def single_qubit_with_unitary_operation_applied_d_times(
+    circuit_depth: int = 1,
+    measurmment_depth: int = 1,
+) -> Tuple[QuantumCircuit, Dict[str, Parameter]]:
     """
-    Returns a circuit with specified gate applied to qubits with probability
-    equal to the noise probability.
+    Returns a single qubit circuit with a parameterised unitary gate
+    applied d times, where d is the circuit depth.
 
     Args:
-        circuit: The circuit to apply the noise to.
-        qubit_ids: The qubits to apply the noise to.
-        noise_probability:
-            The probability of performing a "bit flip" after gate is
-            applied
+        circuit_depth:
+            The number of repetitions of the unitary gate.
+        measurmment_depth:
+            The number of repetitions of the measurement.
 
     Returns:
-        A quantum circuit with a probability of extra gate applied to
-        simulate noise.
-    """
-    if random() < noise_probability:
-        circuit.append(gate, qubit_ids)
+        A single qubit quantum circuit with defined unitary gate
+        applied d times.
 
-
-def entangled_cnot() -> QuantumCircuit:
     """
-    Returns a circuit with CNOT gate
 
-    Returns:
-        A quantum circuit with a noisy CNOT gate.
-    """
+    theta, phi, lam = Parameter("theta"), Parameter("phi"), Parameter("lam")
+
     circuit = return_initial_quantum_circuit(
-        num_qubits=2, num_classical_bits=2
+        num_qubits=1, num_classical_bits=measurmment_depth
     )
-    circuit.h(0)
-    circuit.cx(0, 1)
-    circuit.measure([0, 1], [0, 1])
-    return circuit
 
+    for _ in range(circuit_depth):
+        circuit.u(theta, phi, lam, 0)
 
-def clean_entangled_cnot(
-    theta: float, phi: float, lam: float
-) -> QuantumCircuit:
-    """
-    Returns a circuit with CNOT gate
+    for depth_index in range(measurmment_depth):
+        circuit.measure(0, depth_index)
 
-    Returns:
-        A quantum circuit with a clean CNOT gate.
-    """
-    circuit = return_initial_quantum_circuit(
-        num_qubits=2, num_classical_bits=2
-    )
-    circuit.h(0)
-    circuit.u(theta, phi, lam, 0).inverse()
-    circuit.cx(0, 1)
-    circuit.u(theta, phi, lam, 0).inverse()
-    circuit.u(theta, phi, lam, 1).inverse()
-    circuit.measure([0, 1], [0, 1])
-    return circuit
+    return circuit, {"theta": theta, "phi": phi, "lambda": lam}

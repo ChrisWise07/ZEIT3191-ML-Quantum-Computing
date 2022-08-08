@@ -3,5 +3,6 @@
   "python.formatting.provider": "black",
   "python.formatting.blackPath": "/home/chris_wise/.local/bin/black",
   "python.formatting.blackArgs": ["--line-length", "79"],
+  "editor.rulers": [72]
   // "/home/chris_wise/.local/bin/black" "/usr/local/bin/black"
 }
