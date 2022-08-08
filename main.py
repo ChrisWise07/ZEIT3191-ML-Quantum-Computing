@@ -100,6 +100,9 @@ def return_average_value_of_circuit(circuit: QuantumCircuit) -> float:
     """
     Returns the average final value for the given circuit meaured over
     the given number of shots.
+
+    Args:
+        circuit: The circuit to measure.
     """
     total = 0
 
@@ -121,6 +124,7 @@ def record_results_from_circuit_on_live_qc(
     Args:
         circuit: The circuit to execute.
         backend_name: The name of the backend to use.
+        filename: The name of the file to save the results to.
     """
     job = execute(
         circuit,
@@ -218,9 +222,32 @@ def calculate_total_variation_distance_between_distributions(
     return 0.5 * np.sum(np.abs(distribution_1 - distribution_2))
 
 
+def circuit_creator_wrapper(
+    circuit_creator: Callable[[int, int], QuantumCircuit],
+    unitary_rotations: Dict[Parameter:float],
+    measurement_depth: int,
+    circuit_depth: int,
+) -> QuantumCircuit:
+    """
+    Creates a circuit with the given unitary rotations.
+
+    Args:
+        circuit_creator: The circuit creator to use.
+        unitary_rotations:
+            A dictionary mapping unitary rotations to their parameters
+            of the form (parameter, value).
+        measurement_depth: The depth of the measurement circuit.
+        circuit_depth: The depth of the circuit.
+    """
+    return transpile(
+        circuit_creator(circuit_depth, measurement_depth), optimization_level=3
+    ).assign_parameters(unitary_rotations, inplace=True)
+
+
 def return_array_of_averages_over_circuit_depths(
     circuit_creator: Callable,
-    rotation_error_dict: Dict[str, float],
+    unitary_rotations: Dict[Parameter:float],
+    measurement_depth: int,
 ) -> np.ndarray:
     """
     Calculates the average of the results of the given circuit on the
@@ -228,17 +255,24 @@ def return_array_of_averages_over_circuit_depths(
 
     Args:
         circuit_creator: The circuit creator to use.
-        execution_function: The execution function to use.
-        rotation_error_dict: The rotation error dictionary to use.
+        unitary_rotations:
+            A dictionary mapping unitary rotations to their parameters
+            of the form (parameter, value).
+        measurement_depth: The depth of the measurement circuit.
+
+    Returns:
+
     """
     with Pool() as p:
         return np.array(
             p.map(
                 return_average_value_of_circuit,
                 [
-                    transpile(
-                        circuit_creator(rotation_error_dict, depth),
-                        SIMULATOR[0],
+                    circuit_creator_wrapper(
+                        circuit_creator,
+                        unitary_rotations,
+                        measurement_depth=measurement_depth,
+                        circuit_depth=depth,
                     )
                     for depth in range(CIRCUIT_DEPTH)
                 ],
@@ -338,6 +372,12 @@ def plot_line_graph_results(
 def return_live_and_equivalent_fake_backend(noisy_simulation: bool = False):
     """
     Returns the live and equivalent fake backend.
+
+    Args:
+        noisy_simulation: Whether to use noisy simulation.
+
+    Returns:
+        The live and equivalent fake backend.
     """
     if noisy_simulation:
         return return_live_and_fake_backend_with_shortest_queue(
@@ -375,7 +415,7 @@ def find_coherent_rotation_errors():
 def find_measurement_error():
     circuit_depth = 2
     measurement_depth = 3
-    shots = 1000
+    shots = 10000
 
     live_backend, fake_backend = return_live_and_equivalent_fake_backend(
         noisy_simulation=True
@@ -391,7 +431,7 @@ def find_measurement_error():
     if circuit_depth:
         circuit.assign_parameters(
             {
-                parameter_list.get("theta"): pi,
+                parameter_list.get("theta"): pi - 0.05,
                 parameter_list.get("phi"): 0,
                 parameter_list.get("lambda"): pi,
             },
@@ -411,9 +451,16 @@ def find_measurement_error():
     ):
         actual_values[str(round(key.count("1") / len(key)))] += value
 
-    print(f"Total: {total}")
-    print(f"Average: {total/shots}")
     print(f"Actual values: {actual_values}")
+
+
+def graph_average_value_over_circuit_depth():
+    max_circuit_depth = 10
+    number_of_measurements = 3
+
+    return_array_of_averages_over_circuit_depths(
+        circuit_creator=single_qubit_with_unitary_operation_applied_d_times
+    )
 
 
 def main():
