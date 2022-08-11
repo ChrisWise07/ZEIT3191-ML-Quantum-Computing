@@ -1,5 +1,8 @@
+import imp
 from typing import Dict, Tuple
-from qiskit.circuit import QuantumCircuit, Parameter
+from qiskit.circuit import QuantumCircuit, Parameter, ClassicalRegister, Clbit
+import math
+import numpy as np
 
 
 def return_initial_quantum_circuit(
@@ -129,7 +132,8 @@ def unitary_defined_entangled_cnot(
 def single_qubit_with_unitary_operation_applied_d_times(
     circuit_depth: int = 1,
     measurmment_depth: int = 1,
-) -> Tuple[QuantumCircuit, Dict[str, Parameter]]:
+    preparation_depth: int = 1,
+) -> QuantumCircuit:
     """
     Returns a single qubit circuit with a parameterised unitary gate
     applied d times, where d is the circuit depth.
@@ -139,6 +143,8 @@ def single_qubit_with_unitary_operation_applied_d_times(
             The number of repetitions of the unitary gate.
         measurmment_depth:
             The number of repetitions of the measurement.
+        prepartition_depth:
+            The number of repetitions of the prepartition.
 
     Returns:
         A single qubit quantum circuit with defined unitary gate
@@ -149,13 +155,34 @@ def single_qubit_with_unitary_operation_applied_d_times(
     theta, phi, lam = Parameter("theta"), Parameter("phi"), Parameter("lam")
 
     circuit = return_initial_quantum_circuit(
-        num_qubits=1, num_classical_bits=measurmment_depth
+        num_qubits=preparation_depth,
+        num_classical_bits=measurmment_depth * preparation_depth,
     )
+
+    [
+        circuit.initialize(
+            np.array(
+                [
+                    1 / math.sqrt(2),
+                    1 / math.sqrt(2),
+                ]
+            ),
+            qubit_index,
+        )
+        for qubit_index in range(preparation_depth)
+    ]
 
     for _ in range(circuit_depth):
         circuit.u(theta, phi, lam, 0)
 
-    for depth_index in range(measurmment_depth):
-        circuit.measure(0, depth_index)
+    for prepartition_index in range(preparation_depth):
+        circuit.measure
+        circuit.measure(
+            prepartition_index,
+            range(
+                (prepartition_index * measurmment_depth),
+                (prepartition_index * measurmment_depth) + measurmment_depth,
+            ),
+        )
 
-    return circuit, {"theta": theta, "phi": phi, "lambda": lam}
+    return circuit

@@ -1,6 +1,7 @@
-from typing import Callable, Dict, List, Tuple
+from curses import raw
+from typing import Callable, Dict, List, Tuple, Union
 from qiskit import execute, transpile
-from qiskit.circuit import QuantumCircuit, Parameter
+from qiskit.circuit import QuantumCircuit
 from qiskit.tools.monitor import job_monitor
 from math import pi
 from quantum_circuits_creator import (
@@ -15,8 +16,7 @@ from qiskit.providers.aer import AerSimulator
 import matplotlib.pyplot as plt
 import numpy as np
 from numba import njit
-from multiprocessing import Pool
-
+from textwrap import wrap
 
 # LIVE_QC_KET_DISTRIBUTIONS = file_handler(
 #     path="entangled_cnot_results.txt",
@@ -34,7 +34,7 @@ EPSILON = 0.0001
 
 SIMULATOR = []  # type: List[AerSimulator]
 
-TOTAL_NUM_SHOTS = 1024
+TOTAL_NUM_SHOTS = 1024 * 2
 
 NUMBER_OF_CYCLES = 12
 
@@ -92,24 +92,57 @@ def execute_and_return_counts_of_values(
         SIMULATOR[0]
         .run(circuit, shots=TOTAL_NUM_SHOTS)
         .result()
-        .data()["counts"]
+        .get_counts(circuit)
+        .items()
     )
 
 
-def return_average_value_of_circuit(circuit: QuantumCircuit) -> float:
+def process_raw_measurement_data_by_finding_average_of_measurements(
+    raw_measurement_data: List[Tuple[str, int]], measurement_depth: int = None
+) -> Dict[str, int]:
+    processed_measurment_data = {}
+    for key, value in raw_measurement_data:
+        processed_bit = "".join(
+            [
+                str(round(bit_group.count("1") / measurement_depth))
+                for bit_group in wrap(key, measurement_depth)
+            ]
+        )
+
+        if processed_measurment_data.get(processed_bit):
+            processed_measurment_data[processed_bit] += value
+        else:
+            processed_measurment_data[processed_bit] = value
+
+    return processed_measurment_data
+
+
+def return_average_value_of_circuit(
+    circuit: QuantumCircuit, measurement_depth: int
+) -> float:
     """
     Returns the average final value for the given circuit meaured over
     the given number of shots.
 
     Args:
         circuit: The circuit to measure.
+        measurement_depth: The number of times to measure a qubit
+
+    Returns:
+        The average final value for the given circuit measured over the
+        given number of shots.
     """
     total = 0
 
-    for hex_value, count in execute_and_return_counts_of_values(
-        circuit
+    for (
+        binary_value,
+        count,
+    ) in process_raw_measurement_data_by_finding_average_of_measurements(
+        raw_measurement_data=execute_and_return_counts_of_values(circuit),
+        measurement_depth=measurement_depth,
     ).items():
-        total += int(hex_value, 16) * count
+
+        total += int(binary_value, 2) * count
 
     return total / TOTAL_NUM_SHOTS
 
@@ -222,33 +255,12 @@ def calculate_total_variation_distance_between_distributions(
     return 0.5 * np.sum(np.abs(distribution_1 - distribution_2))
 
 
-def circuit_creator_wrapper(
-    circuit_creator: Callable[[int, int], QuantumCircuit],
-    unitary_rotations: Dict[Parameter:float],
-    measurement_depth: int,
-    circuit_depth: int,
-) -> QuantumCircuit:
-    """
-    Creates a circuit with the given unitary rotations.
-
-    Args:
-        circuit_creator: The circuit creator to use.
-        unitary_rotations:
-            A dictionary mapping unitary rotations to their parameters
-            of the form (parameter, value).
-        measurement_depth: The depth of the measurement circuit.
-        circuit_depth: The depth of the circuit.
-    """
-    return transpile(
-        circuit_creator(circuit_depth, measurement_depth), optimization_level=3
-    ).assign_parameters(unitary_rotations, inplace=True)
-
-
 def return_array_of_averages_over_circuit_depths(
-    circuit_creator: Callable,
-    unitary_rotations: Dict[Parameter:float],
+    circuit_creator: Callable[[int, int], QuantumCircuit],
+    unitary_rotations: Dict[str, float],
     measurement_depth: int,
-) -> np.ndarray:
+    max_circuit_depth: int,
+) -> List[float]:
     """
     Calculates the average of the results of the given circuit on the
     given backend.
@@ -259,25 +271,20 @@ def return_array_of_averages_over_circuit_depths(
             A dictionary mapping unitary rotations to their parameters
             of the form (parameter, value).
         measurement_depth: The depth of the measurement circuit.
+        max_circuit_depth: The maximum depth of the circuit.
 
     Returns:
 
     """
-    with Pool() as p:
-        return np.array(
-            p.map(
-                return_average_value_of_circuit,
-                [
-                    circuit_creator_wrapper(
-                        circuit_creator,
-                        unitary_rotations,
-                        measurement_depth=measurement_depth,
-                        circuit_depth=depth,
-                    )
-                    for depth in range(CIRCUIT_DEPTH)
-                ],
-            )
-        )
+    return [
+        return_average_value_of_circuit(circuit, measurement_depth)
+        for circuit in [
+            transpile(
+                circuit_creator(depth, measurement_depth),
+            ).assign_parameters(unitary_rotations.values(), inplace=False)
+            for depth in range(2, max_circuit_depth, 2)
+        ]
+    ]
 
 
 def optimise_gates_with_noise_wrapper_function(
@@ -369,7 +376,9 @@ def plot_line_graph_results(
     return plt
 
 
-def return_live_and_equivalent_fake_backend(noisy_simulation: bool = False):
+def return_live_and_equivalent_fake_backend(
+    noisy_simulation: bool = False,
+) -> Tuple[Union[IBMQBackend, None], AerSimulator]:
     """
     Returns the live and equivalent fake backend.
 
@@ -384,7 +393,7 @@ def return_live_and_equivalent_fake_backend(noisy_simulation: bool = False):
             num_required_qubits=2
         )
 
-    return AerSimulator()
+    return None, AerSimulator()
 
 
 def find_coherent_rotation_errors():
@@ -413,34 +422,26 @@ def find_coherent_rotation_errors():
 
 
 def find_measurement_error():
-    circuit_depth = 2
-    measurement_depth = 3
-    shots = 10000
+    circuit_depth = 1
+    measurement_depth = 10
+    shots = 10
 
     live_backend, fake_backend = return_live_and_equivalent_fake_backend(
         noisy_simulation=True
     )
     SIMULATOR.append(fake_backend)
-    (
-        circuit,
-        parameter_list,
-    ) = single_qubit_with_unitary_operation_applied_d_times(
+
+    circuit = single_qubit_with_unitary_operation_applied_d_times(
         circuit_depth=circuit_depth, measurmment_depth=measurement_depth
     )
 
     if circuit_depth:
         circuit.assign_parameters(
-            {
-                parameter_list.get("theta"): pi - 0.05,
-                parameter_list.get("phi"): 0,
-                parameter_list.get("lambda"): pi,
-            },
+            [pi, 0, pi],
             inplace=True,
         )
 
     total = 0
-
-    actual_values = {"0": 0, "1": 0}
 
     for key, value in (
         SIMULATOR[0]
@@ -449,17 +450,87 @@ def find_measurement_error():
         .get_counts(circuit)
         .items()
     ):
-        actual_values[str(round(key.count("1") / len(key)))] += value
+        print(f"{key}: {value}")
+        total += (key.count("0") / measurement_depth) * value
+        print(f"Total: {total}")
 
-    print(f"Actual values: {actual_values}")
+    print(f"Total: {total}")
+    print(f"Average Error: {total / shots}")
+
+
+def find_state_preparation_error():
+    circuit_depth = 0
+    measurement_depth = 21
+    preparation_depth = 2
+    shots = 1000
+
+    live_backend, fake_backend = return_live_and_equivalent_fake_backend(
+        noisy_simulation=True
+    )
+    SIMULATOR.append(fake_backend)
+
+    circuit = single_qubit_with_unitary_operation_applied_d_times(
+        circuit_depth=circuit_depth,
+        measurmment_depth=measurement_depth,
+        preparation_depth=preparation_depth,
+    )
+
+    if circuit_depth:
+        circuit.assign_parameters(
+            [pi, 0, pi],
+            inplace=True,
+        )
+
+    # print(circuit)
+
+    results = (
+        SIMULATOR[0]
+        .run(
+            transpile(circuit, SIMULATOR[0], optimization_level=3), shots=shots
+        )
+        .result()
+        .get_counts(circuit)
+        .items()
+    )
+
+    # print(results)
+
+    print(
+        process_raw_measurement_data_by_finding_average_of_measurements(
+            raw_measurement_data=results, measurement_depth=measurement_depth
+        )
+    )
 
 
 def graph_average_value_over_circuit_depth():
-    max_circuit_depth = 10
-    number_of_measurements = 3
+    number_of_measurements = 21
+    max_circuit_depth = 100
+    error = 0.8
 
-    return_array_of_averages_over_circuit_depths(
-        circuit_creator=single_qubit_with_unitary_operation_applied_d_times
+    live_backend, fake_backend = return_live_and_equivalent_fake_backend(
+        noisy_simulation=True
+    )
+    SIMULATOR.append(fake_backend)
+
+    list_of_averages = return_array_of_averages_over_circuit_depths(
+        circuit_creator=single_qubit_with_unitary_operation_applied_d_times,
+        unitary_rotations={
+            "lambda": pi + error,
+            "phi": 0,
+            "theta": pi + error,
+        },
+        measurement_depth=number_of_measurements,
+        max_circuit_depth=max_circuit_depth + 1,
+    )
+
+    plot_line_graph_results(
+        x_axis_values=range(2, max_circuit_depth + 1, 2),
+        y_axis_values=list_of_averages,
+        x_axis_label="Circuit depth",
+        y_axis_label="Average value",
+        title="Average value over circuit depth",
+    ).savefig(
+        "results/average_value_over_circuit_depth_x_gate_every_second_more_measurements_with_error.png"
     )
 
 
@@ -467,7 +538,7 @@ def main():
     """
     Main function.
     """
-    find_measurement_error()
+    find_state_preparation_error()
 
 
 if __name__ == "__main__":
