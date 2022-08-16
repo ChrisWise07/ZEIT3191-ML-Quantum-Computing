@@ -460,9 +460,9 @@ def find_measurement_error():
 
 def find_state_preparation_error():
     circuit_depth = 0
-    measurement_depth = 21
-    preparation_depth = 2
-    shots = 1000
+    measurement_depth = 19
+    preparation_depth = 1
+    shots = 10000
 
     live_backend, fake_backend = return_live_and_equivalent_fake_backend(
         noisy_simulation=True
