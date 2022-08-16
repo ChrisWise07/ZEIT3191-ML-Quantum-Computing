@@ -17,6 +17,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numba import njit
 from textwrap import wrap
+from equations_for_prob_measuring_state import (
+    probability_of_measuring_one_given_ground_state,
+    probability_of_measuring_zero_given_ground_state,
+    probability_of_measuring_one_given_excited_state,
+    probability_of_measuring_zero_given_excited_state,
+)
 
 # LIVE_QC_KET_DISTRIBUTIONS = file_handler(
 #     path="entangled_cnot_results.txt",
@@ -56,7 +62,7 @@ CLEAN_RESULTS_CIRCUIT_DEPTH_CYCLE = np.array(
     * NUMBER_OF_CYCLES
 )
 
-NUM_INIT_POINTS = 25
+NUM_INIT_POINTS = 50
 
 
 def plot_ket_distribution(ket_distribution: dict) -> None:
@@ -253,6 +259,46 @@ def calculate_total_variation_distance_between_distributions(
         The total variation distance between the given distributions.
     """
     return 0.5 * np.sum(np.abs(distribution_1 - distribution_2))
+
+
+@njit(cache=True)
+def calculate_average_variation_distance_between_distributions(
+    distribution_1: np.ndarray, distribution_2: np.ndarray
+) -> float:
+    """
+    Calculates the total variation distance between the given distributions.
+
+    Args:
+        distribution_1:
+            A list of values.
+        distribution_2:
+            A list of values.
+
+    Returns:
+        The total variation distance between the given distributions.
+    """
+    return np.sum(np.abs(distribution_1 - distribution_2)) / len(
+        distribution_1
+    )
+
+
+@njit(cache=True)
+def calculate_largest_variation_distance_between_distributions(
+    distribution_1: np.ndarray, distribution_2: np.ndarray
+) -> float:
+    """
+    Calculates the total variation distance between the given distributions.
+
+    Args:
+        distribution_1:
+            A list of values.
+        distribution_2:
+            A list of values.
+
+    Returns:
+        The total variation distance between the given distributions.
+    """
+    return np.max(np.abs(distribution_1 - distribution_2))
 
 
 def return_array_of_averages_over_circuit_depths(
@@ -534,11 +580,155 @@ def graph_average_value_over_circuit_depth():
     )
 
 
+def generic_optimiser_function(
+    wrapper_function: Callable, pbounds: Dict[str, Tuple[float, float]]
+) -> Dict[str, float]:
+    """
+    Optimises a function using Bayesian Optimization Python Library.
+
+    Args:
+        wrapper_function: The function to optimise.
+        pbounds: The bounds for the optimisation.
+
+    Returns:
+        The optimised parameters.
+    """
+    from bayes_opt import BayesianOptimization
+
+    optimiser = BayesianOptimization(
+        f=wrapper_function,
+        pbounds=pbounds,
+        random_state=1,
+        verbose=1,
+    )
+
+    optimiser.maximize(
+        init_points=NUM_INIT_POINTS,
+        n_iter=NUM_INIT_POINTS * 5,
+    )
+
+    return optimiser.max
+
+
+def error_equations_wrapper_function(
+    epsilon: float,
+    mu: float,
+    nu: float,
+    tau: float,
+) -> float:
+    """
+    Wrapper function for the optimisation function.
+
+    Args:
+        epsilon: The epsilon value.
+        mu: The mu value.
+        nu: The nu value.
+        tau: The tau value.
+
+    Returns:
+        Approximate solutions for error functions.
+    """
+
+    zero_prob_given_ground_state = (
+        probability_of_measuring_zero_given_ground_state(
+            mu=mu, epsilon=epsilon
+        )
+    )
+
+    one_prob_given_ground_state = (
+        probability_of_measuring_one_given_ground_state(nu=nu, epsilon=epsilon)
+    )
+
+    total_ground_state_probabilities = (
+        zero_prob_given_ground_state + one_prob_given_ground_state
+    )
+
+    zero_prob_given_excited_state = (
+        probability_of_measuring_zero_given_excited_state(mu=mu, tau=tau)
+    )
+
+    one_prob_given_excited_state = (
+        probability_of_measuring_one_given_excited_state(nu=nu, tau=tau)
+    )
+
+    total_excited_state_probabilities = (
+        zero_prob_given_excited_state + one_prob_given_excited_state
+    )
+
+    return -(
+        calculate_largest_variation_distance_between_distributions(
+            distribution_1=np.array(
+                [
+                    zero_prob_given_ground_state,
+                    one_prob_given_ground_state,
+                    total_ground_state_probabilities,
+                    zero_prob_given_excited_state,
+                    one_prob_given_excited_state,
+                    total_excited_state_probabilities,
+                    total_excited_state_probabilities
+                    + total_ground_state_probabilities,
+                ]
+            ),
+            distribution_2=np.array([0.95, 0.05, 1, 0.25, 0.75, 1, 2]),
+        )
+        + 2
+        * calculate_total_variation_distance_between_distributions(
+            distribution_1=np.array(
+                [
+                    zero_prob_given_ground_state,
+                    one_prob_given_ground_state,
+                    total_ground_state_probabilities,
+                    zero_prob_given_excited_state,
+                    one_prob_given_excited_state,
+                    total_excited_state_probabilities,
+                    total_excited_state_probabilities
+                    + total_ground_state_probabilities,
+                ]
+            ),
+            distribution_2=np.array([0.95, 0.05, 1, 0.25, 0.75, 1, 2]),
+        )
+        + calculate_average_variation_distance_between_distributions(
+            distribution_1=np.array(
+                [
+                    zero_prob_given_ground_state,
+                    one_prob_given_ground_state,
+                    total_ground_state_probabilities,
+                    zero_prob_given_excited_state,
+                    one_prob_given_excited_state,
+                    total_excited_state_probabilities,
+                    total_excited_state_probabilities
+                    + total_ground_state_probabilities,
+                ]
+            ),
+            distribution_2=np.array([0.95, 0.05, 1, 0.25, 0.75, 1, 2]),
+        )
+    )
+
+
+def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
+    """
+    Finds approximate solutions to the error equations.
+
+    Returns:
+        The approximate solutions to the error equations.
+    """
+
+    return generic_optimiser_function(
+        wrapper_function=error_equations_wrapper_function,
+        pbounds={
+            "epsilon": (0, 1),
+            "mu": (0, 1),
+            "nu": (0, 1),
+            "tau": (0, 1),
+        },
+    )
+
+
 def main():
     """
     Main function.
     """
-    find_state_preparation_error()
+    print(find_approximate_solutions_to_error_equations())
 
 
 if __name__ == "__main__":
