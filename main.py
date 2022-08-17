@@ -1,4 +1,3 @@
-from curses import raw
 from typing import Callable, Dict, List, Tuple, Union
 from qiskit import execute, transpile
 from qiskit.circuit import QuantumCircuit
@@ -8,8 +7,8 @@ from quantum_circuits_creator import (
     unitary_defined_entangled_cnot,
     single_qubit_with_unitary_operation_applied_d_times,
 )
-from utils.general_utils import file_handler
-from json import dumps, load
+from utils.general_utils import file_handler, sin_with_complex, cos_with_real
+from json import dumps
 from utils.ibmq_utils import return_live_and_fake_backend_with_shortest_queue
 from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
 from qiskit.providers.aer import AerSimulator
@@ -63,6 +62,8 @@ CLEAN_RESULTS_CIRCUIT_DEPTH_CYCLE = np.array(
 )
 
 NUM_INIT_POINTS = 50
+
+PROBABILITY_DISTRIBUTION = np.array([0.95, 0.05, 1.0, 0.25, 0.75, 1.0, 2.0])
 
 
 def plot_ket_distribution(ket_distribution: dict) -> None:
@@ -611,10 +612,10 @@ def generic_optimiser_function(
 
 
 def error_equations_wrapper_function(
-    epsilon: float,
-    mu: float,
-    nu: float,
-    tau: float,
+    epsilon_theta: float,
+    mu_theta: float,
+    nu_theta: float,
+    tau_theta: float,
 ) -> float:
     """
     Wrapper function for the optimisation function.
@@ -628,6 +629,10 @@ def error_equations_wrapper_function(
     Returns:
         Approximate solutions for error functions.
     """
+    epsilon = sin_with_complex(epsilon_theta, 0)
+    mu = sin_with_complex(mu_theta, 0)
+    nu = cos_with_real(nu_theta)
+    tau = cos_with_real(tau_theta)
 
     zero_prob_given_ground_state = (
         probability_of_measuring_zero_given_ground_state(
@@ -655,53 +660,31 @@ def error_equations_wrapper_function(
         zero_prob_given_excited_state + one_prob_given_excited_state
     )
 
+    distribution_1 = np.array(
+        [
+            zero_prob_given_ground_state,
+            one_prob_given_ground_state,
+            total_ground_state_probabilities,
+            zero_prob_given_excited_state,
+            one_prob_given_excited_state,
+            total_excited_state_probabilities,
+            total_excited_state_probabilities
+            + total_ground_state_probabilities,
+        ]
+    )
+
     return -(
         calculate_largest_variation_distance_between_distributions(
-            distribution_1=np.array(
-                [
-                    zero_prob_given_ground_state,
-                    one_prob_given_ground_state,
-                    total_ground_state_probabilities,
-                    zero_prob_given_excited_state,
-                    one_prob_given_excited_state,
-                    total_excited_state_probabilities,
-                    total_excited_state_probabilities
-                    + total_ground_state_probabilities,
-                ]
-            ),
-            distribution_2=np.array([0.95, 0.05, 1, 0.25, 0.75, 1, 2]),
+            distribution_1=distribution_1,
+            distribution_2=PROBABILITY_DISTRIBUTION,
         )
-        + 2
-        * calculate_total_variation_distance_between_distributions(
-            distribution_1=np.array(
-                [
-                    zero_prob_given_ground_state,
-                    one_prob_given_ground_state,
-                    total_ground_state_probabilities,
-                    zero_prob_given_excited_state,
-                    one_prob_given_excited_state,
-                    total_excited_state_probabilities,
-                    total_excited_state_probabilities
-                    + total_ground_state_probabilities,
-                ]
-            ),
-            distribution_2=np.array([0.95, 0.05, 1, 0.25, 0.75, 1, 2]),
-        )
-        + calculate_average_variation_distance_between_distributions(
-            distribution_1=np.array(
-                [
-                    zero_prob_given_ground_state,
-                    one_prob_given_ground_state,
-                    total_ground_state_probabilities,
-                    zero_prob_given_excited_state,
-                    one_prob_given_excited_state,
-                    total_excited_state_probabilities,
-                    total_excited_state_probabilities
-                    + total_ground_state_probabilities,
-                ]
-            ),
-            distribution_2=np.array([0.95, 0.05, 1, 0.25, 0.75, 1, 2]),
-        )
+        # + 2
+        # * calculate_total_variation_distance_between_distributions(
+        #     distribution_1=distribution_1, distribution_2=distribution_2
+        # )
+        # + calculate_average_variation_distance_between_distributions(
+        #     distribution_1=distribution_1, distribution_2=distribution_2
+        # )
     )
 
 
@@ -716,10 +699,10 @@ def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
     return generic_optimiser_function(
         wrapper_function=error_equations_wrapper_function,
         pbounds={
-            "epsilon": (0, 1),
-            "mu": (0, 1),
-            "nu": (0, 1),
-            "tau": (0, 1),
+            "epsilon_theta": (0, pi - EPSILON),
+            "mu_theta": (0, pi - EPSILON),
+            "nu_theta": (0, pi - EPSILON),
+            "tau_theta": (0, pi - EPSILON),
         },
     )
 
