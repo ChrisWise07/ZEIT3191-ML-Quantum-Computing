@@ -699,10 +699,10 @@ def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
     return generic_optimiser_function(
         wrapper_function=error_equations_wrapper_function,
         pbounds={
-            "epsilon_theta": (0, pi - EPSILON),
-            "mu_theta": (0, pi - EPSILON),
-            "nu_theta": (0, pi - EPSILON),
-            "tau_theta": (0, pi - EPSILON),
+            "epsilon_theta": (0, pi),
+            "mu_theta": (0, pi),
+            "nu_theta": (0, pi),
+            "tau_theta": (0, pi),
         },
     )
 
