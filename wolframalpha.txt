@@ -1,0 +1,33 @@
+First half of equation
+(L + Z)(((1 + cos(a))/2)((1 + cos(b))/2) + ((1 - cos(a))/2)((1 - cos(b))/2))
++ (X + Y)(((1 + cos(a))/2)((1 - cos(b))/2) + ((1 - cos(a))/2)((1 + cos(b))/2)), L + X + Y + Z = 1
+
+1/2 (1 - cos(a) cos(b) (2 X + 2 Y - 1))
+
+Second half of equation
+cos(a/2)cos(b/2)(
+(L - Z)(e^(-ic)sin(a/2)e^(-id)sin(b/2) + e^(ic)sin(a/2)e^(id)sin(b/2)) + (X - Y)(e^(ic)sin(a/2)e^(-id)sin(b/2) + e^(-ic)sin(a/2)e^(id)sin(b/2))     
+)
+
+1/2 sin(a) sin(b) ((L - Z) cos(c + d) + (X - Y) cos(c - d))
+
+Put together
+1/2
+(
+1 - cos(a) cos(b)(2X + 2Y - 1)+
+sin(a)sin(b)(
+cos(c+d)(L - Z) 
++ cos(c-d)(X - Y)   
+) 
+), L + X + Y + Z = 1
+
+
+Prob
+sin^(2)(a/2)(k_1 + k_2 + k_3 + k_4) +  sin^(2)(c/2)(k_5 + k_6 + k_7 + k_8) = 1$
+
+
+First Half with error
+1  - cos(a) cos(b) (sin^(2)(a/2)(k_1 + k_2 - k_3  - k_4) + sin^(2)(c/2)(k_5 + k_6 - k_7 - k_8))
+
+Second Half with error
+sin(a)sin(b)(cos(c+d)(sin^(2)(a/2)(k_1 - k_2) + sin^(2)(c/2)(k_5 - k_6)) + cos(c-d)(sin^(2)(a/2)(k_3 - k_4) + sin^(2)(c/2)(k_7 - k_8)))

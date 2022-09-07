@@ -1,3 +1,5 @@
+from cmath import cos
+from turtle import color
 from typing import Callable, Dict, List, Tuple, Union
 from qiskit import execute, transpile
 from qiskit.circuit import QuantumCircuit
@@ -7,7 +9,12 @@ from quantum_circuits_creator import (
     unitary_defined_entangled_cnot,
     single_qubit_with_unitary_operation_applied_d_times,
 )
-from utils.general_utils import file_handler, sin_with_complex, cos_with_real
+from utils.general_utils import (
+    file_handler,
+    sin_with_complex,
+    cos_with_real,
+    return_init_np_array_for_single_qubit,
+)
 from json import dumps
 from utils.ibmq_utils import return_live_and_fake_backend_with_shortest_queue
 from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
@@ -22,6 +29,7 @@ from equations_for_prob_measuring_state import (
     probability_of_measuring_one_given_excited_state,
     probability_of_measuring_zero_given_excited_state,
 )
+import openpyxl
 
 # LIVE_QC_KET_DISTRIBUTIONS = file_handler(
 #     path="entangled_cnot_results.txt",
@@ -39,7 +47,7 @@ EPSILON = 0.0001
 
 SIMULATOR = []  # type: List[AerSimulator]
 
-TOTAL_NUM_SHOTS = 1024 * 2
+TOTAL_NUM_SHOTS = 1024 * 10
 
 NUMBER_OF_CYCLES = 12
 
@@ -100,8 +108,28 @@ def execute_and_return_counts_of_values(
         .run(circuit, shots=TOTAL_NUM_SHOTS)
         .result()
         .get_counts(circuit)
-        .items()
     )
+
+
+def execute_and_return_counts_of_values_while_monitoring(
+    circuit: Union[QuantumCircuit, List[QuantumCircuit]],
+) -> Union[Dict[str, int], List[Dict[str, int]]]:
+    """
+    Executes the given circuit and returns the counts of the values.
+    During execution the job is monitored. This function is designed for
+    execution on a live qc
+
+    Args:
+        circuit: The circuit to execute.
+
+    Returns:
+        The counts of the values.
+    """
+    job = execute(circuit, backend=SIMULATOR[0], shots=TOTAL_NUM_SHOTS)
+
+    job_monitor(job)
+
+    return job.result().get_counts()
 
 
 def process_raw_measurement_data_by_finding_average_of_measurements(
@@ -152,34 +180,6 @@ def return_average_value_of_circuit(
         total += int(binary_value, 2) * count
 
     return total / TOTAL_NUM_SHOTS
-
-
-def record_results_from_circuit_on_live_qc(
-    circuit: QuantumCircuit, backend: IBMQBackend = None, filename: str = None
-):
-    """
-    Records the results of the given circuit on a live IBMQ quantum
-    computer.
-
-    Args:
-        circuit: The circuit to execute.
-        backend_name: The name of the backend to use.
-        filename: The name of the file to save the results to.
-    """
-    job = execute(
-        circuit,
-        backend=backend,
-        shots=10000,
-    )
-    job_monitor(job)
-
-    file_handler(
-        path=filename,
-        mode="w",
-        func=lambda f: f.write(
-            dumps(job.result().get_counts(circuit), indent=4)
-        ),
-    )
 
 
 def calculate_chi_squared_statistic_between_ket_distributions(
@@ -424,20 +424,21 @@ def plot_line_graph_results(
 
 
 def return_live_and_equivalent_fake_backend(
-    noisy_simulation: bool = False,
+    noisy_simulation: bool = False, num_required_qubits: int = 1
 ) -> Tuple[Union[IBMQBackend, None], AerSimulator]:
     """
     Returns the live and equivalent fake backend.
 
     Args:
         noisy_simulation: Whether to use noisy simulation.
+        num_required_qubits: the number of qubits required
 
     Returns:
         The live and equivalent fake backend.
     """
     if noisy_simulation:
         return return_live_and_fake_backend_with_shortest_queue(
-            num_required_qubits=2
+            num_required_qubits=num_required_qubits
         )
 
     return None, AerSimulator()
@@ -460,12 +461,6 @@ def find_coherent_rotation_errors():
     results = optimise_euler_angles(optimise_gates_with_noise_wrapper_function)
 
     print(f"Final results: {results}")
-
-    record_results_from_circuit_on_live_qc(
-        unitary_defined_entangled_cnot(results["params"], 1),
-        backend,
-        filename="results/entangled_cnot_results_learnt_gate_with_noise_circuit_depth.txt",
-    )
 
 
 def find_measurement_error():
@@ -707,11 +702,145 @@ def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
     )
 
 
+def return_data_from_live_execution_over_range_of_circuits(
+    end_value: int, start_value: int = 0
+) -> List[Dict[str, int]]:
+    return execute_and_return_counts_of_values_while_monitoring(
+        [
+            single_qubit_with_unitary_operation_applied_d_times(
+                circuit_depth=0,
+                measurmment_depth=1,
+                preparation_depth=1,
+                initlisation_array=return_init_np_array_for_single_qubit(
+                    theta=theta_index * np.pi / 6,
+                    phi=phi_index * np.pi / 6,
+                ),
+            )
+            for theta_index in range(start_value, end_value)
+            for phi_index in range(12)
+        ]
+    )
+
+
+def save_data_to_excel_sheet(
+    data: List[float],
+    row_range: Tuple[int, int],
+    column_range: Tuple[int, int],
+    workbook: openpyxl.Workbook,
+) -> None:
+    """
+    Saves data from data to cells in excel spreadsheet
+    """
+
+    sheet = workbook.active
+
+    [
+        sheet.cell(
+            row=theta_index,
+            column=phi_index,
+            value=data.pop(0).get("0", 0) / TOTAL_NUM_SHOTS,
+        )
+        for theta_index in range(*row_range)
+        for phi_index in range(*column_range)
+    ]
+
+    workbook.save("results/probability_data.xlsx")
+
+
+def find_probability_data_for_various_qubit_initialisations() -> None:
+    """
+    Over a range of initialisation values find probability of measuring
+    0 and record in excel spread sheet
+    """
+    starting_row, starting_column = 20, 3
+    live_backend, fake_backend = return_live_and_equivalent_fake_backend(
+        noisy_simulation=True, num_required_qubits=1
+    )
+    SIMULATOR.append(live_backend)
+
+    workbook = openpyxl.load_workbook("results/probability_data.xlsx")
+
+    num_rows_per_batch = 6
+    num_columns_per_batch = 12
+
+    save_data_to_excel_sheet(
+        data=return_data_from_live_execution_over_range_of_circuits(
+            start_value=0, end_value=num_rows_per_batch
+        ),
+        row_range=(starting_row, starting_row + num_rows_per_batch),
+        column_range=(
+            starting_column,
+            starting_column + num_columns_per_batch,
+        ),
+        workbook=workbook,
+    )
+
+    save_data_to_excel_sheet(
+        data=return_data_from_live_execution_over_range_of_circuits(
+            start_value=num_rows_per_batch, end_value=num_rows_per_batch * 2
+        ),
+        row_range=(
+            starting_row + num_rows_per_batch,
+            starting_row + num_rows_per_batch * 2,
+        ),
+        column_range=(
+            starting_column,
+            starting_column + num_columns_per_batch,
+        ),
+        workbook=workbook,
+    )
+
+    workbook.save("results/probability_data.xlsx")
+
+
+def draw_graphs_for_various_qubit_initialisations_probability_data() -> None:
+    """
+    Draw graphs for various qubit initialisations
+    """
+    starting_row, starting_column = 52, 3
+    workbook = openpyxl.load_workbook("results/probability_data.xlsx")
+    sheet = workbook.active
+    fig = plt.figure()
+
+    ax = fig.add_subplot(111, projection="3d")
+
+    theta_axis_data = [
+        value
+        for theta_index in range(12)
+        for value in [theta_index * np.pi / 6] * 12
+    ]
+
+    phi_axis_data = [phi_index * np.pi / 6 for phi_index in range(12)] * 12
+
+    probability_axis_data = [
+        sheet.cell(
+            row=starting_row + theta_index,
+            column=starting_column + phi_index,
+        ).value
+        for theta_index in range(12)
+        for phi_index in range(12)
+    ]
+
+    ax.scatter(
+        theta_axis_data,
+        phi_axis_data,
+        probability_axis_data,
+    )
+
+    ax.set_xlabel("theta")
+    ax.set_ylabel("phi")
+    ax.set_zlabel("probability")
+
+    ax.view_init(20, 100)
+
+    plt.savefig("results/probability_data_visual.png")
+
+
 def main():
     """
     Main function.
     """
-    print(find_approximate_solutions_to_error_equations())
+    draw_graphs_for_various_qubit_initialisations_probability_data()
 
 
 if __name__ == "__main__":

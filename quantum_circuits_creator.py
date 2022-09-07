@@ -133,6 +133,12 @@ def single_qubit_with_unitary_operation_applied_d_times(
     circuit_depth: int = 1,
     measurmment_depth: int = 1,
     preparation_depth: int = 1,
+    initlisation_array: np.ndarray = np.array(
+        [
+            1,
+            0,
+        ]
+    ),
 ) -> QuantumCircuit:
     """
     Returns a single qubit circuit with a parameterised unitary gate
@@ -161,12 +167,7 @@ def single_qubit_with_unitary_operation_applied_d_times(
 
     [
         circuit.initialize(
-            np.array(
-                [
-                    1 / math.sqrt(2),
-                    1 / math.sqrt(2),
-                ]
-            ),
+            initlisation_array,
             qubit_index,
         )
         for qubit_index in range(preparation_depth)
