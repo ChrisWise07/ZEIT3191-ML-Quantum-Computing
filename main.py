@@ -797,7 +797,7 @@ def draw_graphs_for_various_qubit_initialisations_probability_data() -> None:
     """
     Draw graphs for various qubit initialisations
     """
-    starting_row, starting_column = 52, 3
+    starting_row, starting_column = 20, 3
     workbook = openpyxl.load_workbook("results/probability_data.xlsx")
     sheet = workbook.active
     fig = plt.figure()
@@ -829,11 +829,9 @@ def draw_graphs_for_various_qubit_initialisations_probability_data() -> None:
 
     ax.set_xlabel("theta")
     ax.set_ylabel("phi")
-    ax.set_zlabel("error")
+    ax.set_zlabel("probability of measuring 0")
 
-    ax.view_init(0, 270)
-
-    plt.savefig("results/probability_data_visual_face_on_theta.png")
+    plt.savefig("results/probability_of_measuring_zero_data.png")
 
 
 def draw_and_save_circuit_diagram(circuit: QuantumCircuit, path: str) -> None:
