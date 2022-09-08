@@ -829,17 +829,31 @@ def draw_graphs_for_various_qubit_initialisations_probability_data() -> None:
 
     ax.set_xlabel("theta")
     ax.set_ylabel("phi")
-    ax.set_zlabel("probability")
+    ax.set_zlabel("error")
 
-    ax.view_init(20, 100)
+    ax.view_init(0, 270)
 
-    plt.savefig("results/probability_data_visual.png")
+    plt.savefig("results/probability_data_visual_face_on_theta.png")
+
+
+def draw_and_save_circuit_diagram(circuit: QuantumCircuit, path: str) -> None:
+    """
+    Simple function to mpl draw a circuit and save the png
+
+    Args:
+        circuit:
+            The circuit to draw
+        path:
+            The path to save the image at
+    """
+    circuit.draw(output="mpl").savefig(path)
 
 
 def main():
     """
     Main function.
     """
+
     draw_graphs_for_various_qubit_initialisations_probability_data()
 
 
