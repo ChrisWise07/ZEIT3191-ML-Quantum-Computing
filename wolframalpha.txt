@@ -21,6 +21,17 @@ cos(c+d)(L - Z)
 ) 
 ), L + X + Y + Z = 1
 
+1/2
+(
+1 - cos(theta + epsilon) cos(mu)(2X + 2Y - 1)+
+sin(theta + epsilon)sin(mu)(
+cos(phi + nu +  tau)(L - Z) 
++ cos(phi + nu - tau)(X - Y)   
+) 
+)
+
+
+
 
 Prob
 sin^(2)(a/2)(k_1 + k_2 + k_3 + k_4) +  sin^(2)(c/2)(k_5 + k_6 + k_7 + k_8) = 1$
@@ -31,3 +42,10 @@ First Half with error
 
 Second Half with error
 sin(a)sin(b)(cos(c+d)(sin^(2)(a/2)(k_1 - k_2) + sin^(2)(c/2)(k_5 - k_6)) + cos(c-d)(sin^(2)(a/2)(k_3 - k_4) + sin^(2)(c/2)(k_7 - k_8)))
+
+
+
+MATHEMATICA LANGUAGE
+1/2(1 - Cos[θ + ϵ] Cos[ν] (2 (Sin[(θ + ϵ)/2]^2 (Subscript[k, 1] + Subscript[k, 2]) + Sin[(ϕ + μ)/2]^2 (Subscript[k, 4] + Subscript[k, 5])) - 1) +
+Sin[θ + ϵ] Sin[ν](
+Cos[ϕ + μ + τ] (1 - Sin[(θ + ϵ)/2]^2 (2 Subscript[k, 3] + Subscript[k, 1] + Subscript[k, 2]) - Sin[(ϕ + μ)/2]^2 (2 Subscript[k, 6] + Subscript[k, 4] + Subscript[k, 5])) + Cos[ϕ + μ - τ] (Sin[(θ + ϵ)/2]^2 (Subscript[k, 1] - Subscript[k, 2]) + Sin[(ϕ + μ)/2]^2 (Subscript[k, 4] - Subscript[k, 5]))))

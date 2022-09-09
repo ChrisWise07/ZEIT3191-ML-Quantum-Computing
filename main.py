@@ -1,5 +1,3 @@
-from cmath import cos
-from turtle import color
 from typing import Callable, Dict, List, Tuple, Union
 from qiskit import execute, transpile
 from qiskit.circuit import QuantumCircuit
@@ -15,7 +13,6 @@ from utils.general_utils import (
     cos_with_real,
     return_init_np_array_for_single_qubit,
 )
-from json import dumps
 from utils.ibmq_utils import return_live_and_fake_backend_with_shortest_queue
 from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
 from qiskit.providers.aer import AerSimulator
@@ -28,20 +25,11 @@ from equations_for_prob_measuring_state import (
     probability_of_measuring_zero_given_ground_state,
     probability_of_measuring_one_given_excited_state,
     probability_of_measuring_zero_given_excited_state,
+    whole_equation_for_probability_of_measuring_one,
+    equation_for_kraus_probabilities,
 )
 import openpyxl
 
-# LIVE_QC_KET_DISTRIBUTIONS = file_handler(
-#     path="entangled_cnot_results.txt",
-#     mode="r",
-#     func=lambda f: load(f),
-# )
-
-# LIVE_QC_CLEAN_KET_DISTRIBUTIONS = file_handler(
-#     path="entangled_cnot_results_clean.txt",
-#     mode="r",
-#     func=lambda f: load(f),
-# )
 
 EPSILON = 0.0001
 
@@ -69,9 +57,30 @@ CLEAN_RESULTS_CIRCUIT_DEPTH_CYCLE = np.array(
     * NUMBER_OF_CYCLES
 )
 
-NUM_INIT_POINTS = 50
+NUM_INIT_POINTS = 100
 
 PROBABILITY_DISTRIBUTION = np.array([0.95, 0.05, 1.0, 0.25, 0.75, 1.0, 2.0])
+
+
+def return_large_scale_prob_distro() -> np.ndarray:
+    starting_row, starting_column = 20, 3
+    workbook = openpyxl.load_workbook("results/probability_data.xlsx")
+    sheet = workbook.active
+
+    return np.array(
+        [
+            sheet.cell(
+                row=starting_row + theta_index,
+                column=starting_column + phi_index,
+            ).value
+            for theta_index in range(12)
+            for phi_index in range(12)
+        ]
+        + [1] * 144
+    )
+
+
+LARGE_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro()
 
 
 def plot_ket_distribution(ket_distribution: dict) -> None:
@@ -683,6 +692,76 @@ def error_equations_wrapper_function(
     )
 
 
+def big_error_equation_wrapper_function(
+    eplison: float,
+    nu: float,
+    mu: float,
+    tau: float,
+    kxtheta: float,
+    kytheta: float,
+    kztheta: float,
+    kitheta: float,
+    kxphi: float,
+    kyphi: float,
+    kzphi: float,
+    kiphi: float,
+) -> float:
+    """
+    Wrapper function for the optimisation function.
+
+    Args:
+        epsilon: The epsilon value.
+        mu: The mu value.
+        nu: The nu value.
+        tau: The tau value.
+
+    Returns:
+        Approximate solutions for error functions.
+    """
+
+    return -np.square(
+        LARGE_PROBABILITY_DISTRIBUTION
+        - np.array(
+            [
+                whole_equation_for_probability_of_measuring_one(
+                    theta=theta_index * np.pi / 6,
+                    phi=phi_index * np.pi / 6,
+                    eplison=eplison,
+                    nu=nu,
+                    mu=mu,
+                    tau=tau,
+                    kxtheta=kxtheta,
+                    kytheta=kytheta,
+                    kztheta=kztheta,
+                    kxphi=kxphi,
+                    kyphi=kyphi,
+                    kzphi=kzphi,
+                )
+                for theta_index in range(12)
+                for phi_index in range(12)
+            ]
+            + [
+                equation_for_kraus_probabilities(
+                    theta=theta_index * np.pi / 6,
+                    phi=phi_index * np.pi / 6,
+                    eplison=eplison,
+                    mu=mu,
+                    kxtheta=kxtheta,
+                    kytheta=kytheta,
+                    kztheta=kztheta,
+                    kitheta=kitheta,
+                    kxphi=kxphi,
+                    kyphi=kyphi,
+                    kzphi=kzphi,
+                    kiphi=kiphi,
+                )
+                for theta_index in range(12)
+                for phi_index in range(12)
+            ]
+        )
+    ).mean()
+
+
 def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
     """
     Finds approximate solutions to the error equations.
@@ -698,6 +777,33 @@ def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
             "mu_theta": (0, pi),
             "nu_theta": (0, pi),
             "tau_theta": (0, pi),
+        },
+    )
+
+
+def find_approximate_solutions_to_big_error_equation() -> Dict[str, float]:
+    """
+    Finds approximate solutions to the error equations.
+
+    Returns:
+        The approximate solutions to the error equations.
+    """
+
+    return generic_optimiser_function(
+        wrapper_function=big_error_equation_wrapper_function,
+        pbounds={
+            "eplison": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+            "nu": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+            "mu": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+            "tau": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+            "kxtheta": (0, 1.0 - EPSILON),
+            "kytheta": (0, 1.0 - EPSILON),
+            "kztheta": (0, 1.0 - EPSILON),
+            "kitheta": (0, 1.0 - EPSILON),
+            "kxphi": (0, 1.0 - EPSILON),
+            "kyphi": (0, 1.0 - EPSILON),
+            "kzphi": (0, 1.0 - EPSILON),
+            "kiphi": (0, 1.0 - EPSILON),
         },
     )
 
@@ -852,7 +958,7 @@ def main():
     Main function.
     """
 
-    draw_graphs_for_various_qubit_initialisations_probability_data()
+    print(find_approximate_solutions_to_big_error_equation())
 
 
 if __name__ == "__main__":
