@@ -35,7 +35,7 @@ EPSILON = 0.0001
 
 SIMULATOR = []  # type: List[AerSimulator]
 
-TOTAL_NUM_SHOTS = 1024 * 10
+TOTAL_NUM_SHOTS = 1000 * 20
 
 NUMBER_OF_CYCLES = 12
 
@@ -809,7 +809,7 @@ def find_approximate_solutions_to_big_error_equation() -> Dict[str, float]:
 
 
 def return_data_from_live_execution_over_range_of_circuits(
-    end_value: int, start_value: int = 0
+    number_of_theta_angles: int, number_of_phi_angles: int
 ) -> List[Dict[str, int]]:
     return execute_and_return_counts_of_values_while_monitoring(
         [
@@ -818,18 +818,18 @@ def return_data_from_live_execution_over_range_of_circuits(
                 measurmment_depth=1,
                 preparation_depth=1,
                 initlisation_array=return_init_np_array_for_single_qubit(
-                    theta=theta_index * np.pi / 6,
-                    phi=phi_index * np.pi / 6,
+                    theta=theta_index * np.pi / (number_of_theta_angles/2),
+                    phi=phi_index * np.pi / (number_of_phi_angles/2),
                 ),
             )
-            for theta_index in range(start_value, end_value)
-            for phi_index in range(12)
+            for theta_index in range(number_of_theta_angles)
+            for phi_index in range(number_of_phi_angles)
         ]
     )
 
 
 def save_data_to_excel_sheet(
-    data: List[float],
+    data: List[Dict[str, int]],
     row_range: Tuple[int, int],
     column_range: Tuple[int, int],
     workbook: openpyxl.Workbook,
@@ -858,45 +858,33 @@ def find_probability_data_for_various_qubit_initialisations() -> None:
     Over a range of initialisation values find probability of measuring
     0 and record in excel spread sheet
     """
-    starting_row, starting_column = 20, 3
+    starting_row, starting_column = 3, 5
     live_backend, fake_backend = return_live_and_equivalent_fake_backend(
         noisy_simulation=True, num_required_qubits=1
     )
     SIMULATOR.append(live_backend)
 
-    workbook = openpyxl.load_workbook("results/probability_data.xlsx")
+    total_num_theta_angles = 100
+    total_num_phi_angles = 1
 
-    num_rows_per_batch = 6
-    num_columns_per_batch = 12
+    workbook_name = "results/probability_data_2.xlsx"
+    workbook = openpyxl.load_workbook(workbook_name)
 
     save_data_to_excel_sheet(
         data=return_data_from_live_execution_over_range_of_circuits(
-            start_value=0, end_value=num_rows_per_batch
+            number_of_theta_angles=total_num_theta_angles, 
+            number_of_phi_angles=total_num_phi_angles
         ),
-        row_range=(starting_row, starting_row + num_rows_per_batch),
+        row_range=(starting_row, starting_row + total_num_theta_angles),
         column_range=(
             starting_column,
-            starting_column + num_columns_per_batch,
+            starting_column + total_num_phi_angles,
         ),
         workbook=workbook,
     )
 
-    save_data_to_excel_sheet(
-        data=return_data_from_live_execution_over_range_of_circuits(
-            start_value=num_rows_per_batch, end_value=num_rows_per_batch * 2
-        ),
-        row_range=(
-            starting_row + num_rows_per_batch,
-            starting_row + num_rows_per_batch * 2,
-        ),
-        column_range=(
-            starting_column,
-            starting_column + num_columns_per_batch,
-        ),
-        workbook=workbook,
-    )
 
-    workbook.save("results/probability_data.xlsx")
+    workbook.save(workbook_name)
 
 
 def draw_graphs_for_various_qubit_initialisations_probability_data() -> None:
@@ -958,7 +946,7 @@ def main():
     Main function.
     """
 
-    print(find_approximate_solutions_to_big_error_equation())
+    find_probability_data_for_various_qubit_initialisations()
 
 
 if __name__ == "__main__":
