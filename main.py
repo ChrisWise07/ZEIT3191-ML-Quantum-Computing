@@ -27,6 +27,8 @@ from equations_for_prob_measuring_state import (
     probability_of_measuring_zero_given_excited_state,
     whole_equation_for_probability_of_measuring_one,
     equation_for_kraus_probabilities,
+    whole_equation_for_probability_of_measuring_one_no_complex,
+    equation_for_kraus_probabilities_no_complex,
 )
 import openpyxl
 
@@ -62,25 +64,30 @@ NUM_INIT_POINTS = 100
 PROBABILITY_DISTRIBUTION = np.array([0.95, 0.05, 1.0, 0.25, 0.75, 1.0, 2.0])
 
 
-def return_large_scale_prob_distro() -> np.ndarray:
-    starting_row, starting_column = 20, 3
-    workbook = openpyxl.load_workbook("results/probability_data.xlsx")
+def return_large_scale_prob_distro(
+    theta_range: List[int], phi_range: List[int], workbook_name: str
+) -> np.ndarray:
+    workbook = openpyxl.load_workbook(workbook_name)
     sheet = workbook.active
 
     return np.array(
         [
             sheet.cell(
-                row=starting_row + theta_index,
-                column=starting_column + phi_index,
+                row=theta_index,
+                column=phi_index,
             ).value
-            for theta_index in range(12)
-            for phi_index in range(12)
+            for theta_index in range(*theta_range)
+            for phi_index in range(*phi_range)
         ]
-        + [1] * 144
+        + [1] * (len(range(*theta_range)) * len(range(*phi_range)))
     )
 
 
-LARGE_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro()
+LARGE_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro(
+    theta_range=[3, 103],
+    phi_range=[5, 6],
+    workbook_name="results/probability_data_2.xlsx",
+)
 
 
 def plot_ket_distribution(ket_distribution: dict) -> None:
@@ -762,6 +769,58 @@ def big_error_equation_wrapper_function(
     ).mean()
 
 
+def big_error_equation_no_complex_wrapper_function(
+    eplison: float,
+    x: float,
+    y: float,
+    z: float,
+    i: float,
+) -> float:
+    """
+    Wrapper function for the optimisation function.
+
+    Args:
+        epsilon: The epsilon value.
+        mu: The mu value.
+        nu: The nu value.
+        tau: The tau value.
+
+    Returns:
+        Approximate solutions for error functions.
+    """
+    num_theta = 100
+    theta_interval = np.pi * num_theta / 2
+
+    return -np.mean(
+        np.square(
+            LARGE_PROBABILITY_DISTRIBUTION
+            - np.array(
+                [
+                    whole_equation_for_probability_of_measuring_one_no_complex(
+                        theta=theta_index * theta_interval,
+                        eplison=eplison,
+                        x=x,
+                        y=y,
+                        z=z,
+                    )
+                    for theta_index in range(num_theta)
+                ]
+                + [
+                    equation_for_kraus_probabilities_no_complex(
+                        theta=theta_index * theta_interval,
+                        eplison=eplison,
+                        x=x,
+                        y=y,
+                        z=z,
+                        i=i,
+                    )
+                    for theta_index in range(num_theta)
+                ]
+            )
+        )
+    )
+
+
 def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
     """
     Finds approximate solutions to the error equations.
@@ -947,20 +1006,13 @@ def main():
 
     print(
         generic_optimiser_function(
-            wrapper_function=big_error_equation_wrapper_function,
+            wrapper_function=big_error_equation_no_complex_wrapper_function,
             pbounds={
-                "eplison": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
-                "nu": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
-                "mu": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
-                "tau": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
-                "kxtheta": (0, 1.0 - EPSILON),
-                "kytheta": (0, 1.0 - EPSILON),
-                "kztheta": (0, 1.0 - EPSILON),
-                "kitheta": (0, 1.0 - EPSILON),
-                "kxphi": (0, 1.0 - EPSILON),
-                "kyphi": (0, 1.0 - EPSILON),
-                "kzphi": (0, 1.0 - EPSILON),
-                "kiphi": (0, 1.0 - EPSILON),
+                "eplison": (-pi / 2, pi / 2),
+                "x": (0, 1.0),
+                "y": (0, 1.0),
+                "z": (0, 1.0),
+                "i": (0, 1.0),
             },
         )
     )

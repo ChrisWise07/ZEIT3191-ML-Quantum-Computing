@@ -243,4 +243,5 @@ def equation_for_kraus_probabilities_no_complex(
         + z
         + i
         + (i - x - y - z) * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
+        - 1
     )
