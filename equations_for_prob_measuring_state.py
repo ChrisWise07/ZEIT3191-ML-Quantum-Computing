@@ -182,3 +182,65 @@ def equation_for_kraus_probabilities(
         + ((np.cos((theta + eplison) / 2) ** 2) * (kitheta))
         + ((np.cos((phi + mu) / 2) ** 2) * (kiphi))
     )
+
+
+@njit(cache=True)
+def whole_equation_for_probability_of_measuring_one_no_complex(
+    theta: float,
+    eplison: float,
+    x: float,
+    y: float,
+    z: float,
+) -> float:
+    """
+    Probability of measuring zero given excited state.
+    """
+    return (
+        (1 / 2)
+        + 0.48785
+        * (
+            1
+            - x
+            - y
+            + (x + y)
+            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
+        )
+        * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
+        + 0.109555
+        * (
+            1
+            - y
+            - z
+            + (y + z)
+            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
+        )
+        * np.sin(theta + eplison * (np.sin(theta / 2) ** 2))
+    )
+
+
+@njit(cache=True)
+def equation_for_kraus_probabilities_no_complex(
+    theta: float,
+    eplison: float,
+    x: float,
+    y: float,
+    z: float,
+    i: float,
+) -> float:
+    """
+    Probability of measuring zero given excited state.
+
+    Args:
+        tau: Parameter tau.
+        nu: Parameter nu.
+
+    Returns:
+        Probability of measuring one given excited state.
+    """
+    return (
+        x
+        + y
+        + z
+        + i
+        + (i - x - y - z) * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
+    )

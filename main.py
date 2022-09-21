@@ -818,8 +818,8 @@ def return_data_from_live_execution_over_range_of_circuits(
                 measurmment_depth=1,
                 preparation_depth=1,
                 initlisation_array=return_init_np_array_for_single_qubit(
-                    theta=theta_index * np.pi / (number_of_theta_angles/2),
-                    phi=phi_index * np.pi / (number_of_phi_angles/2),
+                    theta=theta_index * np.pi / (number_of_theta_angles / 2),
+                    phi=phi_index * np.pi / (number_of_phi_angles / 2),
                 ),
             )
             for theta_index in range(number_of_theta_angles)
@@ -872,8 +872,8 @@ def find_probability_data_for_various_qubit_initialisations() -> None:
 
     save_data_to_excel_sheet(
         data=return_data_from_live_execution_over_range_of_circuits(
-            number_of_theta_angles=total_num_theta_angles, 
-            number_of_phi_angles=total_num_phi_angles
+            number_of_theta_angles=total_num_theta_angles,
+            number_of_phi_angles=total_num_phi_angles,
         ),
         row_range=(starting_row, starting_row + total_num_theta_angles),
         column_range=(
@@ -882,7 +882,6 @@ def find_probability_data_for_various_qubit_initialisations() -> None:
         ),
         workbook=workbook,
     )
-
 
     workbook.save(workbook_name)
 
@@ -946,7 +945,25 @@ def main():
     Main function.
     """
 
-    find_probability_data_for_various_qubit_initialisations()
+    print(
+        generic_optimiser_function(
+            wrapper_function=big_error_equation_wrapper_function,
+            pbounds={
+                "eplison": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+                "nu": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+                "mu": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+                "tau": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
+                "kxtheta": (0, 1.0 - EPSILON),
+                "kytheta": (0, 1.0 - EPSILON),
+                "kztheta": (0, 1.0 - EPSILON),
+                "kitheta": (0, 1.0 - EPSILON),
+                "kxphi": (0, 1.0 - EPSILON),
+                "kyphi": (0, 1.0 - EPSILON),
+                "kzphi": (0, 1.0 - EPSILON),
+                "kiphi": (0, 1.0 - EPSILON),
+            },
+        )
+    )
 
 
 if __name__ == "__main__":
