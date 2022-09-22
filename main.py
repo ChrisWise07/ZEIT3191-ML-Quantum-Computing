@@ -72,14 +72,17 @@ def return_large_scale_prob_distro(
 
     return np.array(
         [
-            sheet.cell(
-                row=theta_index,
-                column=phi_index,
-            ).value
+            round(
+                sheet.cell(
+                    row=theta_index,
+                    column=phi_index,
+                ).value,
+                4,
+            )
             for theta_index in range(*theta_range)
             for phi_index in range(*phi_range)
         ]
-        + [1] * (len(range(*theta_range)) * len(range(*phi_range)))
+        + [0] * (len(range(*theta_range)) * len(range(*phi_range)))
     )
 
 
@@ -774,7 +777,6 @@ def big_error_equation_no_complex_wrapper_function(
     x: float,
     y: float,
     z: float,
-    i: float,
 ) -> float:
     """
     Wrapper function for the optimisation function.
@@ -789,7 +791,7 @@ def big_error_equation_no_complex_wrapper_function(
         Approximate solutions for error functions.
     """
     num_theta = 100
-    theta_interval = np.pi * num_theta / 2
+    theta_interval = np.pi / (num_theta / 2) * 2
 
     return -np.mean(
         np.square(
@@ -812,7 +814,6 @@ def big_error_equation_no_complex_wrapper_function(
                         x=x,
                         y=y,
                         z=z,
-                        i=i,
                     )
                     for theta_index in range(num_theta)
                 ]
@@ -1012,7 +1013,6 @@ def main():
                 "x": (0, 1.0),
                 "y": (0, 1.0),
                 "z": (0, 1.0),
-                "i": (0, 1.0),
             },
         )
     )

@@ -195,26 +195,37 @@ def whole_equation_for_probability_of_measuring_one_no_complex(
     """
     Probability of measuring zero given excited state.
     """
-    return (
-        (1 / 2)
-        + 0.48785
-        * (
-            1
-            - x
-            - y
-            + (x + y)
-            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
-        )
-        * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
-        + 0.109555
-        * (
-            1
-            - y
-            - z
-            + (y + z)
-            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
-        )
-        * np.sin(theta + eplison * (np.sin(theta / 2) ** 2))
+    return round(
+        (
+            (1 / 2)
+            + 0.4878
+            * (
+                1
+                - x
+                - y
+                + (x + y)
+                * (
+                    np.cos(
+                        1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))
+                    )
+                )
+            )
+            * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
+            + 0.109778
+            * (
+                1
+                - y
+                - z
+                + (y + z)
+                * (
+                    np.cos(
+                        1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))
+                    )
+                )
+            )
+            * np.sin(theta + eplison * (np.sin(theta / 2) ** 2))
+        ),
+        4,
     )
 
 
@@ -225,7 +236,6 @@ def equation_for_kraus_probabilities_no_complex(
     x: float,
     y: float,
     z: float,
-    i: float,
 ) -> float:
     """
     Probability of measuring zero given excited state.
@@ -237,11 +247,6 @@ def equation_for_kraus_probabilities_no_complex(
     Returns:
         Probability of measuring one given excited state.
     """
-    return (
-        x
-        + y
-        + z
-        + i
-        + (i - x - y - z) * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
-        - 1
+    return (-1 + x + y + z) * (
+        -1 + np.cos(theta + eplison * np.square(np.sin(theta / 2)))
     )
