@@ -1,3 +1,4 @@
+from sre_parse import Verbose
 from typing import Callable, Dict, List, Tuple, Union
 from qiskit import execute, transpile
 from qiskit.circuit import QuantumCircuit
@@ -31,7 +32,7 @@ from equations_for_prob_measuring_state import (
     equation_for_kraus_probabilities_no_complex,
 )
 import openpyxl
-
+import pyswarms as ps
 
 EPSILON = 0.0001
 
@@ -772,8 +773,8 @@ def big_error_equation_wrapper_function(
     ).mean()
 
 
-def big_error_equation_no_complex_wrapper_function(
-    eplison: float,
+def big_error_equation_no_complex_bayesian_wrapper_function(
+    epsilon: float,
     x: float,
     y: float,
     z: float,
@@ -791,7 +792,7 @@ def big_error_equation_no_complex_wrapper_function(
         Approximate solutions for error functions.
     """
     num_theta = 100
-    theta_interval = np.pi / (num_theta / 2) * 2
+    theta_interval = np.pi / (num_theta / 2)
 
     return -np.mean(
         np.square(
@@ -800,7 +801,7 @@ def big_error_equation_no_complex_wrapper_function(
                 [
                     whole_equation_for_probability_of_measuring_one_no_complex(
                         theta=theta_index * theta_interval,
-                        eplison=eplison,
+                        eplison=epsilon,
                         x=x,
                         y=y,
                         z=z,
@@ -810,7 +811,7 @@ def big_error_equation_no_complex_wrapper_function(
                 + [
                     equation_for_kraus_probabilities_no_complex(
                         theta=theta_index * theta_interval,
-                        eplison=eplison,
+                        eplison=epsilon,
                         x=x,
                         y=y,
                         z=z,
@@ -819,6 +820,58 @@ def big_error_equation_no_complex_wrapper_function(
                 ]
             )
         )
+    )
+
+
+def big_error_equation_no_complex_pso_wrapper_function(
+    particle_params: np.ndarray,
+    num_theta: int = 100,
+    theta_interval: float = np.pi / (100 / 2),
+) -> np.ndarray:
+    """
+    Wrapper function for the optimisation function.
+
+    Args:
+        epsilon: The epsilon value.
+        mu: The mu value.
+        nu: The nu value.
+        tau: The tau value.
+
+    Returns:
+        Approximate solutions for error functions.
+    """
+
+    return np.array(
+        [
+            np.mean(
+                np.square(
+                    LARGE_PROBABILITY_DISTRIBUTION
+                    - np.array(
+                        [
+                            whole_equation_for_probability_of_measuring_one_no_complex(
+                                theta=theta_index * theta_interval,
+                                eplison=eplison,
+                                x=x,
+                                y=y,
+                                z=z,
+                            )
+                            for theta_index in range(num_theta)
+                        ]
+                        + [
+                            equation_for_kraus_probabilities_no_complex(
+                                theta=theta_index * theta_interval,
+                                eplison=eplison,
+                                x=x,
+                                y=y,
+                                z=z,
+                            )
+                            for theta_index in range(num_theta)
+                        ]
+                    )
+                )
+            )
+            for eplison, x, y, z in particle_params
+        ]
     )
 
 
@@ -1000,22 +1053,53 @@ def draw_and_save_circuit_diagram(circuit: QuantumCircuit, path: str) -> None:
     circuit.draw(output="mpl").savefig(path)
 
 
+def pso_optimisation_of_big_error_equation_no_complex(
+    num_particles: int, iters: int
+) -> None:
+    """
+    Perform PSO optimisation
+    """
+    num_theta = 100
+    theta_interval = np.pi / (num_theta / 2)
+
+    arg_mins = np.array([-pi / 2, 0, 0, 0])
+    arg_maxs = np.array([pi / 2, 1, 1, 1])
+    options = {"c1": 0.5, "c2": 0.3, "w": 0.9}
+
+    optimizer = ps.single.GlobalBestPSO(
+        n_particles=num_particles,
+        dimensions=4,
+        options=options,
+        bounds=(arg_mins, arg_maxs),
+    )
+
+    optimizer.optimize(
+        big_error_equation_no_complex_pso_wrapper_function,
+        iters=iters,
+        num_theta=num_theta,
+        theta_interval=theta_interval,
+        verbose=True,
+    )
+
+
+def bayesian_optimisation_of_big_error_equation_no_complex() -> None:
+    return generic_optimiser_function(
+        wrapper_function=big_error_equation_no_complex_bayesian_wrapper_function,
+        pbounds={
+            "epsilon": (-pi / 2, pi / 2),
+            "x": (0, 1),
+            "y": (0, 1),
+            "z": (0, 1),
+        },
+    )
+
+
 def main():
     """
     Main function.
     """
 
-    print(
-        generic_optimiser_function(
-            wrapper_function=big_error_equation_no_complex_wrapper_function,
-            pbounds={
-                "eplison": (-pi / 2, pi / 2),
-                "x": (0, 1.0),
-                "y": (0, 1.0),
-                "z": (0, 1.0),
-            },
-        )
-    )
+    pso_optimisation_of_big_error_equation_no_complex(100, 100000)
 
 
 if __name__ == "__main__":
