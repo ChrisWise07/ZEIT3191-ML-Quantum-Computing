@@ -195,37 +195,26 @@ def whole_equation_for_probability_of_measuring_one_no_complex(
     """
     Probability of measuring zero given excited state.
     """
-    return round(
-        (
-            (1 / 2)
-            + 0.4878
-            * (
-                1
-                - x
-                - y
-                + (x + y)
-                * (
-                    np.cos(
-                        1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))
-                    )
-                )
-            )
-            * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
-            + 0.109778
-            * (
-                1
-                - y
-                - z
-                + (y + z)
-                * (
-                    np.cos(
-                        1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))
-                    )
-                )
-            )
-            * np.sin(theta + eplison * (np.sin(theta / 2) ** 2))
-        ),
-        4,
+    return (
+        (1 / 2)
+        + 0.4878
+        * (
+            1
+            - x
+            - y
+            + (x + y)
+            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
+        )
+        * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
+        + 0.109778
+        * (
+            1
+            - y
+            - z
+            + (y + z)
+            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
+        )
+        * np.sin(theta + eplison * (np.sin(theta / 2) ** 2))
     )
 
 
@@ -253,7 +242,7 @@ def equation_for_kraus_probabilities_no_complex(
 
 
 @njit(cache=True)
-def static_equation_for_probability_of_measuring_zero_no_complex(
+def static_probability_equation_for_measuring_zero_no_complex(
     theta: float,
     eplison: float,
     mu: float,
@@ -262,12 +251,8 @@ def static_equation_for_probability_of_measuring_zero_no_complex(
     z: float,
 ) -> float:
     """ """
-    return (
+    return (1 / 2) * (
         1
-        / 2
-        * (
-            1
-            + (1 - 2 * x - 2 * y) * np.cos(eplison + theta) * np.cos(mu)
-            + (1 - 2 * y - 2 * z) * np.sin(eplison + theta) * np.sin(mu)
-        )
+        + (1 - 2 * x - 2 * y) * np.cos(eplison + theta) * np.cos(mu)
+        + (1 - 2 * y - 2 * z) * np.sin(eplison + theta) * np.sin(mu)
     )

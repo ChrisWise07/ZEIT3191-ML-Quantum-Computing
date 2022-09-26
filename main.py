@@ -1,5 +1,6 @@
+from ast import Call
 from sre_parse import Verbose
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 from qiskit import execute, transpile
 from qiskit.circuit import QuantumCircuit
 from qiskit.tools.monitor import job_monitor
@@ -30,7 +31,7 @@ from equations_for_prob_measuring_state import (
     equation_for_kraus_probabilities,
     whole_equation_for_probability_of_measuring_one_no_complex,
     equation_for_kraus_probabilities_no_complex,
-    static_equation_for_probability_of_measuring_zero_no_complex,
+    static_probability_equation_for_measuring_zero_no_complex,
 )
 import openpyxl
 import pyswarms as ps
@@ -846,22 +847,24 @@ def big_error_equation_no_complex_bayesian_wrapper_function(
     )
 
 
-def big_error_equation_no_complex_pso_wrapper_function(
+def mse_prob_distro_use_trig_eqn_no_complex_pso_wrapper_function(
     particle_params: np.ndarray,
     num_theta: int = 100,
     theta_interval: float = np.pi / (100 / 2),
 ) -> np.ndarray:
     """
-    Wrapper function for the optimisation function.
+    Wrapper function using the PSO algorithm to find the minimum mse
+    between measured probability distribution and calculated
+    probabilities from trigonometric probability equation.
 
     Args:
-        epsilon: The epsilon value.
-        mu: The mu value.
-        nu: The nu value.
-        tau: The tau value.
+        particle_params: The parameters for the particle.
+        num_theta: The number of theta values to use.
+        theta_interval: The interval between theta values.
 
     Returns:
-        Approximate solutions for error functions.
+        The mse between the measured probability distribution and the
+        calculated probability distribution.
     """
 
     return np.array(
@@ -898,22 +901,25 @@ def big_error_equation_no_complex_pso_wrapper_function(
     )
 
 
-def big_error_equation_static_no_complex_pso_wrapper_function(
+def mse_prob_distro_use_static_eqn_no_complex_pso_wrapper_function(
     particle_params: np.ndarray,
+    measured_prob_distro: np.ndarray = LARGE_PROBABILITY_DISTRIBUTION,
     num_theta: int = 100,
     theta_interval: float = np.pi / (100 / 2),
 ) -> np.ndarray:
     """
-    Wrapper function for the optimisation function.
+    Wrapper function using the PSO algorithm to find the minimum mse
+    between measured probability distribution and calculated
+    probabilities from static probability equation.
 
     Args:
-        epsilon: The epsilon value.
-        mu: The mu value.
-        nu: The nu value.
-        tau: The tau value.
+        particle_params: The parameters for the particle.
+        num_theta: The number of theta values to use.
+        theta_interval: The interval between theta values.
 
     Returns:
-        Approximate solutions for error functions.
+        The mse between the measured probability distribution and the
+        calculated probability distribution.
     """
 
     return np.array(
@@ -923,7 +929,7 @@ def big_error_equation_static_no_complex_pso_wrapper_function(
                     LARGE_PROBABILITY_DISTRIBUTION
                     - np.array(
                         [
-                            static_equation_for_probability_of_measuring_zero_no_complex(
+                            static_probability_equation_for_measuring_zero_no_complex(
                                 theta=theta_index * theta_interval,
                                 eplison=eplison,
                                 mu=mu,
@@ -933,7 +939,7 @@ def big_error_equation_static_no_complex_pso_wrapper_function(
                             )
                             for theta_index in range(num_theta)
                         ]
-                        + [x + y + z + l]
+                        + [1 - (x + y + z + l)] * num_theta
                     )
                 )
             )
@@ -1120,32 +1126,56 @@ def draw_and_save_circuit_diagram(circuit: QuantumCircuit, path: str) -> None:
     circuit.draw(output="mpl").savefig(path)
 
 
+def general_pso_optimisation_handler(
+    num_dimensions: int,
+    bounds: Tuple[np.ndarray, np.ndarray],
+    objective_func: Callable,
+    objective_func_kwargs: Dict[str, Any],
+    options: Dict[str, float] = {"c1": 0.5, "c2": 0.3, "w": 0.9},
+    num_particles: int = 100,
+    iterations: int = 10000,
+) -> None:
+    """
+    General handler for running a PSO optimisation
+
+    Args:
+        num_dimensions:
+            The number of dimensions to optimise over
+        bounds:
+            The bounds to optimise over
+        objective_func:
+            The objective function to optimise
+    """
+    optimizer = ps.single.GlobalBestPSO(
+        n_particles=num_particles,
+        dimensions=num_dimensions,
+        options=options,
+        bounds=bounds,
+    )
+
+    cost, pos = optimizer.optimize(
+        objective_func,
+        iters=iterations,
+        **objective_func_kwargs,
+    )
+
+
 def pso_optimisation_of_big_error_equation_no_complex(
     num_particles: int, iters: int
 ) -> None:
     """
     Perform PSO optimisation
     """
-    num_theta = 100
-    theta_interval = np.pi / (num_theta / 2)
-
-    arg_mins = np.array([-2 * pi, 0, 0, 0])
-    arg_maxs = np.array([2 * pi, 1, 1, 1])
-    options = {"c1": 0.5, "c2": 0.3, "w": 0.9}
-
-    optimizer = ps.single.GlobalBestPSO(
-        n_particles=num_particles,
-        dimensions=4,
-        options=options,
-        bounds=(arg_mins, arg_maxs),
-    )
-
-    optimizer.optimize(
-        big_error_equation_no_complex_pso_wrapper_function,
-        iters=iters,
-        num_theta=num_theta,
-        theta_interval=theta_interval,
-        verbose=True,
+    general_pso_optimisation_handler(
+        num_dimensions=4,
+        bounds=(np.array([-2 * pi, 0, 0, 0]), np.array([2 * pi, 1, 1, 1])),
+        objective_func=mse_prob_distro_use_trig_eqn_no_complex_pso_wrapper_function,
+        objective_func_kwargs={
+            "num_theta": 100,
+            "theta_interval": np.pi / (100 / 2),
+        },
+        num_particles=num_particles,
+        iterations=iters,
     )
 
 
@@ -1155,26 +1185,20 @@ def pso_optimisation_of_big_error_equation_no_complex_static(
     """
     Perform PSO optimisation
     """
-    num_theta = 100
-    theta_interval = np.pi / (num_theta / 2)
 
-    arg_mins = np.array([-pi / 2, -pi / 2, 0, 0, 0, 0])
-    arg_maxs = np.array([pi / 2, pi / 2, 1, 1, 1, 1])
-    options = {"c1": 0.5, "c2": 0.3, "w": 0.9}
-
-    optimizer = ps.single.GlobalBestPSO(
-        n_particles=num_particles,
-        dimensions=6,
-        options=options,
-        bounds=(arg_mins, arg_maxs),
-    )
-
-    optimizer.optimize(
-        big_error_equation_static_no_complex_pso_wrapper_function,
-        iters=iters,
-        num_theta=num_theta,
-        theta_interval=theta_interval,
-        verbose=True,
+    general_pso_optimisation_handler(
+        num_dimensions=6,
+        bounds=(
+            np.array([-pi / 2, -pi / 2, 0, 0, 0, 0]),
+            np.array([pi / 2, pi / 2, 1, 1, 1, 1]),
+        ),
+        objective_func=mse_prob_distro_use_static_eqn_no_complex_pso_wrapper_function,
+        objective_func_kwargs={
+            "num_theta": 100,
+            "theta_interval": np.pi / (100 / 2),
+        },
+        num_particles=num_particles,
+        iterations=iters,
     )
 
 
@@ -1195,7 +1219,8 @@ def main():
     Main function.
     """
 
-    pso_optimisation_of_big_error_equation_no_complex_static(100, 1000)
+    pso_optimisation_of_big_error_equation_no_complex_static(100, 10000)
+    pso_optimisation_of_big_error_equation_no_complex(100, 10000)
 
 
 if __name__ == "__main__":
