@@ -250,3 +250,24 @@ def equation_for_kraus_probabilities_no_complex(
     return (-1 + x + y + z) * (
         -1 + np.cos(theta + eplison * np.square(np.sin(theta / 2)))
     )
+
+
+@njit(cache=True)
+def static_equation_for_probability_of_measuring_zero_no_complex(
+    theta: float,
+    eplison: float,
+    mu: float,
+    x: float,
+    y: float,
+    z: float,
+) -> float:
+    """ """
+    return (
+        1
+        / 2
+        * (
+            1
+            + (1 - 2 * x - 2 * y) * np.cos(eplison + theta) * np.cos(mu)
+            + (1 - 2 * y - 2 * z) * np.sin(eplison + theta) * np.sin(mu)
+        )
+    )

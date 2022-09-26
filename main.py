@@ -30,6 +30,7 @@ from equations_for_prob_measuring_state import (
     equation_for_kraus_probabilities,
     whole_equation_for_probability_of_measuring_one_no_complex,
     equation_for_kraus_probabilities_no_complex,
+    static_equation_for_probability_of_measuring_zero_no_complex,
 )
 import openpyxl
 import pyswarms as ps
@@ -87,7 +88,29 @@ def return_large_scale_prob_distro(
     )
 
 
-LARGE_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro(
+def return_large_scale_prob_distro_2(
+    theta_range: List[int], phi_range: List[int], workbook_name: str
+) -> np.ndarray:
+    workbook = openpyxl.load_workbook(workbook_name)
+    sheet = workbook.active
+
+    return np.array(
+        [
+            round(
+                sheet.cell(
+                    row=theta_index,
+                    column=phi_index,
+                ).value,
+                4,
+            )
+            for theta_index in range(*theta_range)
+            for phi_index in range(*phi_range)
+        ]
+        + [1]
+    )
+
+
+LARGE_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro_2(
     theta_range=[3, 103],
     phi_range=[5, 6],
     workbook_name="results/probability_data_2.xlsx",
@@ -875,6 +898,50 @@ def big_error_equation_no_complex_pso_wrapper_function(
     )
 
 
+def big_error_equation_static_no_complex_pso_wrapper_function(
+    particle_params: np.ndarray,
+    num_theta: int = 100,
+    theta_interval: float = np.pi / (100 / 2),
+) -> np.ndarray:
+    """
+    Wrapper function for the optimisation function.
+
+    Args:
+        epsilon: The epsilon value.
+        mu: The mu value.
+        nu: The nu value.
+        tau: The tau value.
+
+    Returns:
+        Approximate solutions for error functions.
+    """
+
+    return np.array(
+        [
+            np.mean(
+                np.square(
+                    LARGE_PROBABILITY_DISTRIBUTION
+                    - np.array(
+                        [
+                            static_equation_for_probability_of_measuring_zero_no_complex(
+                                theta=theta_index * theta_interval,
+                                eplison=eplison,
+                                mu=mu,
+                                x=x,
+                                y=y,
+                                z=z,
+                            )
+                            for theta_index in range(num_theta)
+                        ]
+                        + [x + y + z + l]
+                    )
+                )
+            )
+            for eplison, mu, x, y, z, l in particle_params
+        ]
+    )
+
+
 def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
     """
     Finds approximate solutions to the error equations.
@@ -1062,8 +1129,8 @@ def pso_optimisation_of_big_error_equation_no_complex(
     num_theta = 100
     theta_interval = np.pi / (num_theta / 2)
 
-    arg_mins = np.array([-pi / 2, 0, 0, 0])
-    arg_maxs = np.array([pi / 2, 1, 1, 1])
+    arg_mins = np.array([-2 * pi, 0, 0, 0])
+    arg_maxs = np.array([2 * pi, 1, 1, 1])
     options = {"c1": 0.5, "c2": 0.3, "w": 0.9}
 
     optimizer = ps.single.GlobalBestPSO(
@@ -1075,6 +1142,35 @@ def pso_optimisation_of_big_error_equation_no_complex(
 
     optimizer.optimize(
         big_error_equation_no_complex_pso_wrapper_function,
+        iters=iters,
+        num_theta=num_theta,
+        theta_interval=theta_interval,
+        verbose=True,
+    )
+
+
+def pso_optimisation_of_big_error_equation_no_complex_static(
+    num_particles: int, iters: int
+) -> None:
+    """
+    Perform PSO optimisation
+    """
+    num_theta = 100
+    theta_interval = np.pi / (num_theta / 2)
+
+    arg_mins = np.array([-pi / 2, -pi / 2, 0, 0, 0, 0])
+    arg_maxs = np.array([pi / 2, pi / 2, 1, 1, 1, 1])
+    options = {"c1": 0.5, "c2": 0.3, "w": 0.9}
+
+    optimizer = ps.single.GlobalBestPSO(
+        n_particles=num_particles,
+        dimensions=6,
+        options=options,
+        bounds=(arg_mins, arg_maxs),
+    )
+
+    optimizer.optimize(
+        big_error_equation_static_no_complex_pso_wrapper_function,
         iters=iters,
         num_theta=num_theta,
         theta_interval=theta_interval,
@@ -1099,7 +1195,7 @@ def main():
     Main function.
     """
 
-    pso_optimisation_of_big_error_equation_no_complex(100, 100000)
+    pso_optimisation_of_big_error_equation_no_complex_static(100, 1000)
 
 
 if __name__ == "__main__":
