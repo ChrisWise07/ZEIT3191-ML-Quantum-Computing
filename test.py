@@ -1,6 +1,6 @@
 from math import pi
 from equations_for_prob_measuring_state import (
-    whole_equation_for_probability_of_measuring_one_no_complex,
+    static_probability_equation_for_measuring_zero_no_complex,
     equation_for_kraus_probabilities_no_complex,
     static_probability_equation_for_measuring_zero_no_complex,
 )
@@ -49,7 +49,7 @@ def test_equation_for_kraus_probabilities_no_complex():
 def test_whole_equation_for_probability_of_measuring_one_no_complex():
     assert (
         round(
-            whole_equation_for_probability_of_measuring_one_no_complex(
+            static_probability_equation_for_measuring_zero_no_complex(
                 theta=0.0,
                 eplison=1 / 2,
                 x=0.0310517,
@@ -62,7 +62,7 @@ def test_whole_equation_for_probability_of_measuring_one_no_complex():
     )
     assert (
         round(
-            whole_equation_for_probability_of_measuring_one_no_complex(
+            static_probability_equation_for_measuring_zero_no_complex(
                 theta=pi / 2, eplison=7 / 10, x=0.467884, y=3 / 34, z=10 / 51
             ),
             4,
@@ -72,7 +72,7 @@ def test_whole_equation_for_probability_of_measuring_one_no_complex():
 
     assert (
         round(
-            whole_equation_for_probability_of_measuring_one_no_complex(
+            static_probability_equation_for_measuring_zero_no_complex(
                 theta=pi, eplison=-2 / 5, x=0.012232, y=0.0, z=61 / 102
             ),
             4,

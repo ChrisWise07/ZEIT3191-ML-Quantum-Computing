@@ -185,7 +185,7 @@ def equation_for_kraus_probabilities(
 
 
 @njit(cache=True)
-def whole_equation_for_probability_of_measuring_one_no_complex(
+def trig_probability_equation_for_measuring_zero_no_complex(
     theta: float,
     eplison: float,
     x: float,

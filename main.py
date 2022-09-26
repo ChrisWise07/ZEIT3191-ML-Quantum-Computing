@@ -29,12 +29,12 @@ from equations_for_prob_measuring_state import (
     probability_of_measuring_zero_given_excited_state,
     whole_equation_for_probability_of_measuring_one,
     equation_for_kraus_probabilities,
-    whole_equation_for_probability_of_measuring_one_no_complex,
+    trig_probability_equation_for_measuring_zero_no_complex,
     equation_for_kraus_probabilities_no_complex,
     static_probability_equation_for_measuring_zero_no_complex,
 )
 import openpyxl
-import pyswarms as ps
+
 
 EPSILON = 0.0001
 
@@ -89,29 +89,7 @@ def return_large_scale_prob_distro(
     )
 
 
-def return_large_scale_prob_distro_2(
-    theta_range: List[int], phi_range: List[int], workbook_name: str
-) -> np.ndarray:
-    workbook = openpyxl.load_workbook(workbook_name)
-    sheet = workbook.active
-
-    return np.array(
-        [
-            round(
-                sheet.cell(
-                    row=theta_index,
-                    column=phi_index,
-                ).value,
-                4,
-            )
-            for theta_index in range(*theta_range)
-            for phi_index in range(*phi_range)
-        ]
-        + [1]
-    )
-
-
-LARGE_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro_2(
+LARGE_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro(
     theta_range=[3, 103],
     phi_range=[5, 6],
     workbook_name="results/probability_data_2.xlsx",
@@ -620,8 +598,11 @@ def graph_average_value_over_circuit_depth():
     )
 
 
-def generic_optimiser_function(
-    wrapper_function: Callable, pbounds: Dict[str, Tuple[float, float]]
+def generic_bayes_optimiser_function(
+    wrapper_function: Callable,
+    pbounds: Dict[str, Tuple[float, float]],
+    init_points: int,
+    n_iter: int,
 ) -> Dict[str, float]:
     """
     Optimises a function using Bayesian Optimization Python Library.
@@ -643,8 +624,8 @@ def generic_optimiser_function(
     )
 
     optimiser.maximize(
-        init_points=NUM_INIT_POINTS,
-        n_iter=NUM_INIT_POINTS * 5,
+        init_points=init_points,
+        n_iter=n_iter,
     )
 
     return optimiser.max
@@ -797,24 +778,28 @@ def big_error_equation_wrapper_function(
     ).mean()
 
 
-def big_error_equation_no_complex_bayesian_wrapper_function(
+def mse_prob_distro_use_trig_eqn_no_complex_bayes_wrapper_function(
     epsilon: float,
     x: float,
     y: float,
     z: float,
 ) -> float:
     """
-    Wrapper function for the optimisation function.
+    Wrapper function using the Bayesian algorithm to find the minimum mse
+    between measured probability distribution and calculated
+    probabilities from trigonometric probability equation.
 
     Args:
         epsilon: The epsilon value.
-        mu: The mu value.
-        nu: The nu value.
-        tau: The tau value.
+        x: The x value.
+        y: The y value.
+        z: The z value.
 
     Returns:
-        Approximate solutions for error functions.
+        The mse between the measured probability distribution and the
+        calculated probability distribution.
     """
+
     num_theta = 100
     theta_interval = np.pi / (num_theta / 2)
 
@@ -823,7 +808,7 @@ def big_error_equation_no_complex_bayesian_wrapper_function(
             LARGE_PROBABILITY_DISTRIBUTION
             - np.array(
                 [
-                    whole_equation_for_probability_of_measuring_one_no_complex(
+                    trig_probability_equation_for_measuring_zero_no_complex(
                         theta=theta_index * theta_interval,
                         eplison=epsilon,
                         x=x,
@@ -842,6 +827,56 @@ def big_error_equation_no_complex_bayesian_wrapper_function(
                     )
                     for theta_index in range(num_theta)
                 ]
+            )
+        )
+    )
+
+
+def mse_prob_distro_use_static_eqn_no_complex_bayes_wrapper_function(
+    epsilon: float,
+    mu: float,
+    x: float,
+    y: float,
+    z: float,
+    l: float,
+) -> float:
+    """
+    Wrapper function using the Bayesian algorithm to find the minimum mse
+    between measured probability distribution and calculated
+    probabilities from trigonometric probability equation.
+
+    Args:
+        epsilon: The epsilon value.
+        mu: The mu value.
+        x: The x value.
+        y: The y value.
+        z: The z value.
+        l: The l value.
+
+    Returns:
+        The mse between the measured probability distribution and the
+        calculated probability distribution.
+    """
+
+    num_theta = 100
+    theta_interval = np.pi / (num_theta / 2)
+
+    return -np.mean(
+        np.square(
+            LARGE_PROBABILITY_DISTRIBUTION
+            - np.array(
+                [
+                    static_probability_equation_for_measuring_zero_no_complex(
+                        theta=theta_index * theta_interval,
+                        eplison=epsilon,
+                        mu=mu,
+                        x=x,
+                        y=y,
+                        z=z,
+                    )
+                    for theta_index in range(num_theta)
+                ]
+                + [1 - (x + y + z + l)] * num_theta
             )
         )
     )
@@ -874,7 +909,7 @@ def mse_prob_distro_use_trig_eqn_no_complex_pso_wrapper_function(
                     LARGE_PROBABILITY_DISTRIBUTION
                     - np.array(
                         [
-                            whole_equation_for_probability_of_measuring_one_no_complex(
+                            static_probability_equation_for_measuring_zero_no_complex(
                                 theta=theta_index * theta_interval,
                                 eplison=eplison,
                                 x=x,
@@ -956,7 +991,7 @@ def find_approximate_solutions_to_error_equations() -> Dict[str, float]:
         The approximate solutions to the error equations.
     """
 
-    return generic_optimiser_function(
+    return generic_bayes_optimiser_function(
         wrapper_function=error_equations_wrapper_function,
         pbounds={
             "epsilon_theta": (0, pi),
@@ -975,7 +1010,7 @@ def find_approximate_solutions_to_big_error_equation() -> Dict[str, float]:
         The approximate solutions to the error equations.
     """
 
-    return generic_optimiser_function(
+    return generic_bayes_optimiser_function(
         wrapper_function=big_error_equation_wrapper_function,
         pbounds={
             "eplison": (-pi / 2 - EPSILON, pi / 2 - EPSILON),
@@ -1146,6 +1181,8 @@ def general_pso_optimisation_handler(
         objective_func:
             The objective function to optimise
     """
+    import pyswarms as ps
+
     optimizer = ps.single.GlobalBestPSO(
         n_particles=num_particles,
         dimensions=num_dimensions,
@@ -1185,7 +1222,6 @@ def pso_optimisation_of_big_error_equation_no_complex_static(
     """
     Perform PSO optimisation
     """
-
     general_pso_optimisation_handler(
         num_dimensions=6,
         bounds=(
@@ -1202,15 +1238,33 @@ def pso_optimisation_of_big_error_equation_no_complex_static(
     )
 
 
-def bayesian_optimisation_of_big_error_equation_no_complex() -> None:
-    return generic_optimiser_function(
-        wrapper_function=big_error_equation_no_complex_bayesian_wrapper_function,
+def bayesian_optimisation_of_trig_eqn_no_complex() -> None:
+    return generic_bayes_optimiser_function(
+        wrapper_function=mse_prob_distro_use_trig_eqn_no_complex_bayes_wrapper_function,
         pbounds={
             "epsilon": (-pi / 2, pi / 2),
             "x": (0, 1),
             "y": (0, 1),
             "z": (0, 1),
         },
+        init_points=25,
+        n_iter=500,
+    )
+
+
+def bayesian_optimisation_of_static_eqn_no_complex() -> None:
+    return generic_bayes_optimiser_function(
+        wrapper_function=mse_prob_distro_use_static_eqn_no_complex_bayes_wrapper_function,
+        pbounds={
+            "epsilon": (-pi / 2, pi / 2),
+            "mu": (-pi / 2, pi / 2),
+            "x": (0, 1),
+            "y": (0, 1),
+            "z": (0, 1),
+            "l": (0, 1),
+        },
+        init_points=25,
+        n_iter=500,
     )
 
 
@@ -1219,8 +1273,9 @@ def main():
     Main function.
     """
 
-    pso_optimisation_of_big_error_equation_no_complex_static(100, 10000)
-    pso_optimisation_of_big_error_equation_no_complex(100, 10000)
+    print(bayesian_optimisation_of_trig_eqn_no_complex())
+    print("\n\n")
+    print(bayesian_optimisation_of_static_eqn_no_complex())
 
 
 if __name__ == "__main__":
