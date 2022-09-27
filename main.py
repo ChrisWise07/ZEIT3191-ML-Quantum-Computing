@@ -909,7 +909,7 @@ def mse_prob_distro_use_trig_eqn_no_complex_pso_wrapper_function(
                     LARGE_PROBABILITY_DISTRIBUTION
                     - np.array(
                         [
-                            static_probability_equation_for_measuring_zero_no_complex(
+                            trig_probability_equation_for_measuring_zero_no_complex(
                                 theta=theta_index * theta_interval,
                                 eplison=eplison,
                                 x=x,
@@ -938,7 +938,6 @@ def mse_prob_distro_use_trig_eqn_no_complex_pso_wrapper_function(
 
 def mse_prob_distro_use_static_eqn_no_complex_pso_wrapper_function(
     particle_params: np.ndarray,
-    measured_prob_distro: np.ndarray = LARGE_PROBABILITY_DISTRIBUTION,
     num_theta: int = 100,
     theta_interval: float = np.pi / (100 / 2),
 ) -> np.ndarray:
@@ -1247,8 +1246,8 @@ def bayesian_optimisation_of_trig_eqn_no_complex() -> None:
             "y": (0, 1),
             "z": (0, 1),
         },
-        init_points=25,
-        n_iter=500,
+        init_points=75,
+        n_iter=750,
     )
 
 
@@ -1263,7 +1262,7 @@ def bayesian_optimisation_of_static_eqn_no_complex() -> None:
             "z": (0, 1),
             "l": (0, 1),
         },
-        init_points=25,
+        init_points=50,
         n_iter=500,
     )
 
@@ -1272,9 +1271,13 @@ def main():
     """
     Main function.
     """
-
-    print(bayesian_optimisation_of_trig_eqn_no_complex())
-    print("\n\n")
+    # print(f"PSO optimisation of trig equation no complex")
+    # pso_optimisation_of_big_error_equation_no_complex(100, 20000)
+    # print(f"\nPSO optimisation of static equation no complex")
+    # pso_optimisation_of_big_error_equation_no_complex_static(100, 20000)
+    # print(f"\nBayesian optimisation of trig equation no complex")
+    # print(bayesian_optimisation_of_trig_eqn_no_complex())
+    print(f"\nBayesian optimisation of static equation no complex")
     print(bayesian_optimisation_of_static_eqn_no_complex())
 
 
