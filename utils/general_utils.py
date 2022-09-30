@@ -46,3 +46,20 @@ def return_init_np_array_for_single_qubit(
             np.sin(theta / 2) * np.exp(1j * phi),
         ]
     )
+
+
+@njit(cache=True)
+def calculate_mse_between_two_distributions(
+    dist_1: np.ndarray, dist_2: np.ndarray
+):
+    """
+    Calculates the mean squared error between two distributions.
+
+    Args:
+        dist_1: The first distribution.
+        dist_2: The second distribution.
+
+    Returns:
+        The mean squared error between the two distributions.
+    """
+    return np.mean(np.square(dist_1 - dist_2))

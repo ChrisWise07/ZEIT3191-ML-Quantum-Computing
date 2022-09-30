@@ -3,191 +3,103 @@ import numpy as np
 
 
 @njit(cache=True)
-def probability_of_measuring_zero_given_ground_state(
-    mu: float, epsilon: float
-) -> np.complex64:
-    """
-    Probability of measuring zero given ground state.
-
-    Args:
-        mu: Parameter mu.
-        epsilon: Parameter epsilon.
-    Returns:
-        Probability of measuring zero given ground state.
-    """
-    return (
-        -(epsilon**2)
-        + 2
-        * epsilon
-        * mu
-        * (epsilon * mu + np.sqrt((epsilon**2 - 1) * (mu**2 - 1)))
-        - mu**2
-        + 1
-    )
-
-
-@njit(cache=True)
-def probability_of_measuring_one_given_ground_state(
-    nu: float, epsilon: float
-) -> np.complex64:
-    """
-    Probability of measuring one given ground state.
-
-    Args:
-        mu: Parameter mu.
-        epsilon: Parameter epsilon.
-    Returns:
-        Probability of measuring one given ground state.
-    """
-    return (
-        epsilon**2
-        + 2
-        * epsilon
-        * nu
-        * (-epsilon * nu + np.sqrt((epsilon**2 - 1) * (nu**2 - 1)))
-        + nu**2
-    )
-
-
-@njit(cache=True)
-def probability_of_measuring_zero_given_excited_state(
-    tau: float, mu: float
-) -> np.complex64:
-    """
-    Probability of measuring zero given excited state.
-
-    Args:
-        tau: Parameter tau.
-        mu: Parameter mu.
-
-    Returns:
-        Probability of measuring zero given excited state.
-    """
-
-    return (
-        mu**2
-        + 2 * mu * tau * (-mu * tau + np.sqrt((mu**2 - 1) * (tau**2 - 1)))
-        + tau**2
-    )
-
-
-@njit(cache=True)
-def probability_of_measuring_one_given_excited_state(
-    tau: float, nu: float
-) -> np.complex64:
-    """
-    Probability of measuring zero given excited state.
-
-    Args:
-        tau: Parameter tau.
-        nu: Parameter nu.
-
-    Returns:
-        Probability of measuring one given excited state.
-    """
-    return (
-        -(nu**2)
-        + 2 * nu * tau * (nu * tau + np.sqrt((nu**2 - 1) * (tau**2 - 1)))
-        - tau**2
-        + 1
-    )
-
-
-@njit(cache=True)
-def whole_equation_for_probability_of_measuring_one(
-    theta: float,
-    phi: float,
-    eplison: float,
-    nu: float,
-    mu: float,
-    tau: float,
-    kxtheta: float,
-    kytheta: float,
-    kztheta: float,
-    kxphi: float,
-    kyphi: float,
-    kzphi: float,
-) -> np.complex64:
-    """
-    Probability of measuring zero given excited state.
-
-    Args:
-        tau: Parameter tau.
-        nu: Parameter nu.
-
-    Returns:
-        Probability of measuring one given excited state.
-    """
-    return 0.5 * (
-        1
-        - np.cos(theta + eplison)
-        * np.cos(nu)
-        * (
-            2
-            * (
-                (np.sin((theta + eplison) / 2) ** 2) * (kxtheta + kytheta)
-                + (np.sin((phi + mu) / 2) ** 2) * (kxphi + kyphi)
-            )
-            - 1
-        )
-        + np.sin(theta + eplison)
-        * np.sin(nu)
-        * (
-            np.cos(phi + mu + tau)
-            * (
-                1
-                - (
-                    (np.sin((theta + eplison) / 2) ** 2)
-                    * (2 * kztheta + kxtheta + kytheta)
-                )
-                - ((np.sin((phi + mu) / 2) ** 2) * (2 * kzphi + kxphi + kyphi))
-            )
-            + np.cos(phi + mu - tau)
-            * (
-                ((np.sin((theta + eplison) / 2) ** 2) * (kxtheta - kytheta))
-                + ((np.sin((phi + mu) / 2) ** 2) * (kxphi - kyphi))
-            )
-        )
-    )
-
-
-@njit(cache=True)
-def equation_for_kraus_probabilities(
-    theta: float,
-    phi: float,
-    eplison: float,
-    mu: float,
-    kxtheta: float,
-    kytheta: float,
-    kztheta: float,
-    kitheta: float,
-    kxphi: float,
-    kyphi: float,
-    kzphi: float,
-    kiphi: float,
-) -> np.complex64:
-    """
-    Probability of measuring zero given excited state.
-
-    Args:
-        tau: Parameter tau.
-        nu: Parameter nu.
-
-    Returns:
-        Probability of measuring one given excited state.
-    """
-    return (
-        ((np.sin((theta + eplison) / 2) ** 2) * (kxtheta + kytheta + kztheta))
-        + ((np.sin((phi + mu) / 2) ** 2) * (kxphi + kyphi + kzphi))
-        + ((np.cos((theta + eplison) / 2) ** 2) * (kitheta))
-        + ((np.cos((phi + mu) / 2) ** 2) * (kiphi))
-    )
-
-
-@njit(cache=True)
 def trig_probability_equation_for_measuring_zero_no_complex(
     theta: float,
-    eplison: float,
+    epsilon: float,
+    mu: float,
+    x: float,
+    y: float,
+    z: float,
+) -> float:
+    """
+    Probability of measuring zero given excited state.
+    """
+    return (1 / 2) * (
+        1
+        + np.cos(mu)
+        * (
+            1
+            - x
+            - y
+            + (x + y)
+            * (np.cos(1 / 2 * (epsilon + 2 * theta - epsilon * np.cos(theta))))
+        )
+        * np.cos(theta + epsilon * (np.sin(theta / 2) ** 2))
+        + (
+            1
+            - y
+            - z
+            + (y + z)
+            * (np.cos(1 / 2 * (epsilon + 2 * theta - epsilon * np.cos(theta))))
+        )
+        * np.sin(mu)
+        * np.sin(theta + epsilon * (np.sin(theta / 2) ** 2))
+    )
+
+
+@njit(cache=True)
+def trig_kraus_probability_bounding_equation(
+    theta: float,
+    epsilon: float,
+    x: float,
+    y: float,
+    z: float,
+    l: float,
+) -> float:
+    """
+    Probability of measuring zero given excited state.
+
+    Args:
+        tau: Parameter tau.
+        nu: Parameter nu.
+
+    Returns:
+        Probability of measuring one given excited state.
+    """
+    return (
+        -2
+        + l
+        + x
+        + y
+        + z
+        + (l - x - y - z)
+        * np.cos(theta + epsilon * np.square(np.sin(theta / 2)))
+    )
+
+
+@njit(cache=True)
+def static_probability_equation_for_measuring_zero_no_complex(
+    theta: float,
+    epsilon: float,
+    mu: float,
+    x: float,
+    y: float,
+    z: float,
+) -> float:
+    """ """
+    return (1 / 2) * (
+        1
+        + (1 - 2 * x - 2 * y) * np.cos(epsilon + theta) * np.cos(mu)
+        + (1 - 2 * y - 2 * z) * np.sin(epsilon + theta) * np.sin(mu)
+    )
+
+
+@njit(cache=True)
+def static_kraus_probability_bounding_equation(
+    theta: float,
+    x: float,
+    y: float,
+    z: float,
+    l: float,
+) -> float:
+    """ """
+    return x + y + z + l - 1
+
+
+@njit(cache=True)
+def partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
+    theta: float,
+    epsilon: float,
     x: float,
     y: float,
     z: float,
@@ -203,56 +115,37 @@ def trig_probability_equation_for_measuring_zero_no_complex(
             - x
             - y
             + (x + y)
-            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
+            * (np.cos(1 / 2 * (epsilon + 2 * theta - epsilon * np.cos(theta))))
         )
-        * np.cos(theta + eplison * (np.sin(theta / 2) ** 2))
+        * np.cos(theta + epsilon * (np.sin(theta / 2) ** 2))
         + 0.109778
         * (
             1
             - y
             - z
             + (y + z)
-            * (np.cos(1 / 2 * (eplison + 2 * theta - eplison * np.cos(theta))))
+            * (np.cos(1 / 2 * (epsilon + 2 * theta - epsilon * np.cos(theta))))
         )
-        * np.sin(theta + eplison * (np.sin(theta / 2) ** 2))
+        * np.sin(theta + epsilon * (np.sin(theta / 2) ** 2))
     )
 
 
 @njit(cache=True)
-def equation_for_kraus_probabilities_no_complex(
+def partial_solved_trig_equation_for_kraus_probabilities_no_complex(
     theta: float,
-    eplison: float,
+    epsilon: float,
     x: float,
     y: float,
     z: float,
 ) -> float:
     """
     Probability of measuring zero given excited state.
-
     Args:
         tau: Parameter tau.
         nu: Parameter nu.
-
     Returns:
         Probability of measuring one given excited state.
     """
     return (-1 + x + y + z) * (
-        -1 + np.cos(theta + eplison * np.square(np.sin(theta / 2)))
-    )
-
-
-@njit(cache=True)
-def static_probability_equation_for_measuring_zero_no_complex(
-    theta: float,
-    eplison: float,
-    mu: float,
-    x: float,
-    y: float,
-    z: float,
-) -> float:
-    """ """
-    return (1 / 2) * (
-        1
-        + (1 - 2 * x - 2 * y) * np.cos(eplison + theta) * np.cos(mu)
-        + (1 - 2 * y - 2 * z) * np.sin(eplison + theta) * np.sin(mu)
+        -1 + np.cos(theta + epsilon * np.square(np.sin(theta / 2)))
     )
