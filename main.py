@@ -1,5 +1,6 @@
-from typing import Any, Callable, Dict, List, Tuple, Union
-from qiskit import execute
+import random
+import time
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from qiskit.circuit import QuantumCircuit
 from qiskit.tools.monitor import job_monitor
 from math import pi
@@ -12,8 +13,8 @@ from utils.general_utils import (
     calculate_mse_between_two_distributions,
 )
 from utils.ibmq_utils import return_live_and_fake_backend_with_shortest_queue
-from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
 from qiskit.providers.aer import AerSimulator
+from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
 import matplotlib.pyplot as plt
 import numpy as np
 from equations_for_prob_measuring_state import (
@@ -55,6 +56,7 @@ def return_large_scale_prob_distro(
             for theta_index in range(*theta_range)
             for phi_index in range(*phi_range)
         ]
+        + [0.0] * NUM_OF_THETA_VALUES
     )
 
 
@@ -116,6 +118,8 @@ def execute_and_return_counts_of_values_while_monitoring(
     Returns:
         The counts of the values.
     """
+    from qiskit import execute
+
     job = execute(circuit, backend=SIMULATOR[0], shots=TOTAL_NUM_SHOTS)
 
     job_monitor(job)
@@ -228,7 +232,8 @@ def general_pso_optimisation_handler(
     options: Dict[str, float] = {"c1": 0.5, "c2": 0.3, "w": 0.9},
     num_particles: int = 100,
     iterations: int = 10000,
-) -> None:
+    initial_position: Optional[np.ndarray] = None,
+) -> Tuple[float, np.ndarray]:
     """
     General handler for running a PSO optimisation
 
@@ -247,13 +252,17 @@ def general_pso_optimisation_handler(
         dimensions=num_dimensions,
         options=options,
         bounds=bounds,
+        init_pos=initial_position,
     )
 
     cost, pos = optimizer.optimize(
         objective_func,
         iters=iterations,
+        verbose=False,
         **objective_func_kwargs,
     )
+
+    return cost, pos
 
 
 @njit(cache=True)
@@ -305,7 +314,10 @@ def generate_prob_data_over_theta(
                 theta=theta_index * theta_interval,
                 **prob_measuring_zero_equation_func_kwargs,
             )
-            + kraus_prob_bounding_equation_func(
+            for theta_index in range(NUM_OF_THETA_VALUES)
+        ]
+        + [
+            kraus_prob_bounding_equation_func(
                 theta=theta_index * theta_interval,
                 **kraus_prob_bounding_equation_func_kwargs,
             )
@@ -434,7 +446,7 @@ def calculate_mse_between_experimental_and_partial_solved_trig_equation_generate
 
 def pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation(
     list_of_particle_params: np.ndarray,
-    func_for_mse_diff_between_experimental_and_equation_generated_data: Callable,
+    func_for_mse_diff_between_experimental_and_equation_generated_data: Callable = calculate_mse_between_experimental_and_partial_solved_trig_equation_generated_data,
 ) -> np.ndarray:
     """
     Wrapper function using the PSO algorithm to find the minimum mse
@@ -591,105 +603,36 @@ def draw_and_save_circuit_diagram(circuit: QuantumCircuit, path: str) -> None:
     circuit.draw(output="mpl").savefig(path)
 
 
-def pso_optimisation_of_trig_equation_no_complex(
-    num_particles: int, iters: int
+def bayesian_optimisation_of_pso_hyperparameters(
+    num_particles: int,
+    iterations: int,
+    c1: float,
+    c2: float,
+    w: float,
 ) -> None:
-    """
-    Perform PSO optimisation
-    """
-    general_pso_optimisation_handler(
-        num_dimensions=6,
-        bounds=(
-            np.array([-pi / 2, -pi / 2, 0, 0, 0, 0]),
-            np.array([pi / 2, pi / 2, 1, 1, 1, 1]),
-        ),
-        objective_func=mse_prob_distro_use_trig_eqn_no_complex_pso_wrapper_function,
-        objective_func_kwargs={},
-        num_particles=num_particles,
-        iterations=iters,
-    )
-
-
-def pso_optimisation_of_partial_solved_trig_equation_no_complex(
-    num_particles: int, iters: int
-) -> None:
-    """
-    Perform PSO optimisation
-    """
-    general_pso_optimisation_handler(
+    start_time = time.time()
+    cost, pos = general_pso_optimisation_handler(
         num_dimensions=4,
         bounds=(
             np.array([-pi / 2, 0, 0, 0]),
             np.array([pi / 2, 1, 1, 1]),
         ),
-        objective_func=mse_prob_distro_use_partial_solved_trig_eqn_no_complex_pso_wrapper_function,
-        objective_func_kwargs={},
-        num_particles=num_particles,
-        iterations=iters,
-    )
-
-
-def pso_optimisation_of_static_equation_no_complex(
-    num_particles: int, iters: int
-) -> None:
-    """
-    Perform PSO optimisation
-    """
-    general_pso_optimisation_handler(
-        num_dimensions=6,
-        bounds=(
-            np.array([-pi / 2, -pi / 2, 0, 0, 0, 0]),
-            np.array([pi / 2, pi / 2, 1, 1, 1, 1]),
-        ),
-        objective_func=mse_prob_distro_use_static_eqn_no_complex_pso_wrapper_function,
-        objective_func_kwargs={},
-        num_particles=num_particles,
-        iterations=iters,
-    )
-
-
-def bayesian_optimisation_of_trig_eqn_no_complex(
-    init_points: int, n_iter: int
-) -> None:
-    return generic_bayes_optimiser_function(
-        wrapper_function=calculate_mse_between_experimental_and_static_equation_generated_data,
-        pbounds={
-            "epsilon": (-pi / 2, pi / 2),
-            "mu": (-pi / 2, pi / 2),
-            "x": (0, 1),
-            "y": (0, 1),
-            "z": (0, 1),
-            "l": (0, 1),
+        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+        objective_func_kwargs={
+            "func_for_mse_diff_between_experimental_and_equation_generated_data": (
+                calculate_mse_between_experimental_and_partial_solved_trig_equation_generated_data
+            )
         },
-        init_points=init_points,
-        n_iter=n_iter,
+        options={"c1": c1, "c2": c2, "w": w},
+        num_particles=int(num_particles),
+        iterations=int(iterations),
     )
+    return -1 * cost * (time.time() - start_time)
 
 
-def bayesian_optimisation_of_static_eqn_no_complex(
-    init_points: int, n_iter: int
-) -> None:
-    return generic_bayes_optimiser_function(
-        wrapper_function=calculate_mse_between_experimental_and_trig_equation_generated_data,
-        pbounds={
-            "epsilon": (-pi / 2, pi / 2),
-            "mu": (-pi / 2, pi / 2),
-            "x": (0, 1),
-            "y": (0, 1),
-            "z": (0, 1),
-            "l": (0, 1),
-        },
-        init_points=init_points,
-        n_iter=n_iter,
-    )
-
-
-def main():
-    """
-    Main function.
-    """
+def compare_bayes_pso_optimisation_for_various_equations() -> None:
     pso_num_particles = 50
-    pso_num_iterations = 1000
+    pso_num_iterations = 500
     pso_6_dimension_bounds = (
         np.array([-pi / 2, -pi / 2, 0, 0, 0, 0]),
         np.array([pi / 2, pi / 2, 1, 1, 1, 1]),
@@ -699,31 +642,37 @@ def main():
         np.array([pi / 2, 1, 1, 1]),
     )
 
-    general_pso_optimisation_handler(
-        num_dimensions=6,
-        bounds=pso_6_dimension_bounds,
-        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
-        objective_func_kwargs={
-            "func_for_mse_diff_between_experimental_and_equation_generated_data": (
-                calculate_mse_between_experimental_and_static_equation_generated_data
-            )
-        },
-        num_particles=pso_num_particles,
-        iterations=pso_num_iterations,
-    )
+    # print("\n\nPSO optimisation of static probability equation")
+    # general_pso_optimisation_handler(
+    #     num_dimensions=6,
+    #     bounds=pso_6_dimension_bounds,
+    #     objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+    #     objective_func_kwargs={
+    #         "func_for_mse_diff_between_experimental_and_equation_generated_data": (
+    #             calculate_mse_between_experimental_and_static_equation_generated_data
+    #         )
+    #     },
+    #     num_particles=pso_num_particles,
+    #     iterations=pso_num_iterations,
+    # )
 
-    general_pso_optimisation_handler(
-        num_dimensions=6,
-        bounds=pso_6_dimension_bounds,
-        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
-        objective_func_kwargs={
-            "func_for_mse_diff_between_experimental_and_equation_generated_data": (
-                calculate_mse_between_experimental_and_trig_equation_generated_data
-            )
-        },
-        num_particles=pso_num_particles,
-        iterations=pso_num_iterations,
-    )
+    # print("\n\nPSO optimisation of trig probability equation")
+    # general_pso_optimisation_handler(
+    #     num_dimensions=6,
+    #     bounds=pso_6_dimension_bounds,
+    #     objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+    #     objective_func_kwargs={
+    #         "func_for_mse_diff_between_experimental_and_equation_generated_data": (
+    #             calculate_mse_between_experimental_and_trig_equation_generated_data
+    #         )
+    #     },
+    #     num_particles=pso_num_particles,
+    #     iterations=pso_num_iterations,
+    # )
+
+    # print(
+    #     "\n\nPSO optimisation of trig probability equation with 4 dimensions"
+    # )
 
     general_pso_optimisation_handler(
         num_dimensions=4,
@@ -736,51 +685,176 @@ def main():
         },
         num_particles=pso_num_particles,
         iterations=pso_num_iterations,
+        initial_position=np.random.rand(pso_num_particles, 4),
     )
 
-    bayes_init_points = 10
-    bayes_num_iterations = 100
-    bayes_6_dimension_bounds = {
-        "epsilon": (-pi / 2, pi / 2),
-        "mu": (-pi / 2, pi / 2),
-        "x": (0, 1),
-        "y": (0, 1),
-        "z": (0, 1),
-        "l": (0, 1),
-    }
-    bayes_4_dimension_bounds = {
-        "epsilon": (-pi / 2, pi / 2),
-        "x": (0, 1),
-        "y": (0, 1),
-        "z": (0, 1),
-    }
+    # bayes_init_points = 25
+    # bayes_num_iterations = 250
+    # bayes_6_dimension_bounds = {
+    #     "epsilon": (-pi / 2, pi / 2),
+    #     "mu": (-pi / 2, pi / 2),
+    #     "x": (0, 1),
+    #     "y": (0, 1),
+    #     "z": (0, 1),
+    #     "l": (0, 1),
+    # }
+    # bayes_4_dimension_bounds = {
+    #     "epsilon": (-pi / 2, pi / 2),
+    #     "x": (0, 1),
+    #     "y": (0, 1),
+    #     "z": (0, 1),
+    # }
 
-    print(
-        generic_bayes_optimiser_function(
-            wrapper_function=calculate_mse_between_experimental_and_static_equation_generated_data,
-            pbounds=bayes_6_dimension_bounds,
-            init_points=bayes_init_points,
-            n_iter=bayes_num_iterations,
+    # print("\n\nBayesian optimisation of static probability equation")
+    # print(
+    #     generic_bayes_optimiser_function(
+    #         wrapper_function=lambda **kwargs: -1
+    #         * calculate_mse_between_experimental_and_static_equation_generated_data(
+    #             **kwargs
+    #         ),
+    #         pbounds=bayes_6_dimension_bounds,
+    #         init_points=bayes_init_points,
+    #         n_iter=bayes_num_iterations,
+    #     )
+    # )
+
+    # print("\n\nBayesian optimisation of trig probability equation")
+    # print(
+    #     generic_bayes_optimiser_function(
+    #         wrapper_function=lambda **kwargs: -1
+    #         * calculate_mse_between_experimental_and_trig_equation_generated_data(
+    #             **kwargs
+    #         ),
+    #         pbounds=bayes_6_dimension_bounds,
+    #         init_points=bayes_init_points,
+    #         n_iter=bayes_num_iterations,
+    #     )
+    # )
+
+    # print(
+    #     "\n\nBayesian optimisation of trig probability equation with 4 dimensions"
+    # )
+    # print(
+    #     generic_bayes_optimiser_function(
+    #         wrapper_function=lambda **kwargs: -1
+    #         * calculate_mse_between_experimental_and_partial_solved_trig_equation_generated_data(
+    #             **kwargs
+    #         ),
+    #         pbounds=bayes_4_dimension_bounds,
+    #         init_points=bayes_init_points,
+    #         n_iter=bayes_num_iterations,
+    #     )
+    # )
+
+
+def main():
+    """
+    Main function.
+    """
+    # compare_bayes_pso_optimisation_for_various_equations()
+    import json
+
+    pso_num_particles = 50
+    pso_num_iterations = 1000
+    pso_4_dimension_bounds = (
+        np.array([-pi / 2, 0, 0, 0]),
+        np.array([pi / 2, 1, 1, 1]),
+    )
+    num_data_points = 10
+
+    epsilon_init_arrays = [
+        np.array(
+            [
+                [
+                    init_epsilon,
+                    random.random(),
+                    random.random(),
+                    random.random(),
+                ]
+                for _ in range(pso_num_particles)
+            ]
         )
-    )
+        for init_epsilon in np.linspace(-pi / 2, pi / 2, num_data_points)
+    ]
 
-    print(
-        generic_bayes_optimiser_function(
-            wrapper_function=calculate_mse_between_experimental_and_trig_equation_generated_data,
-            pbounds=bayes_6_dimension_bounds,
-            init_points=bayes_init_points,
-            n_iter=bayes_num_iterations,
+    x_init_arrays = [
+        np.array(
+            [
+                [
+                    random.random() * (pi / 2 - (-pi / 2)) + (-pi / 2),
+                    x_init,
+                    random.random(),
+                    random.random(),
+                ]
+                for _ in range(pso_num_particles)
+            ]
         )
-    )
+        for x_init in np.linspace(0, 1, num_data_points)
+    ]
 
-    print(
-        generic_bayes_optimiser_function(
-            wrapper_function=calculate_mse_between_experimental_and_partial_solved_trig_equation_generated_data,
-            pbounds=bayes_4_dimension_bounds,
-            init_points=bayes_init_points,
-            n_iter=bayes_num_iterations,
+    y_init_arrays = [
+        np.array(
+            [
+                [
+                    random.random() * (pi / 2 - (-pi / 2)) + (-pi / 2),
+                    random.random(),
+                    y_init,
+                    random.random(),
+                ]
+                for _ in range(pso_num_particles)
+            ]
         )
-    )
+        for y_init in np.linspace(0, 1, num_data_points)
+    ]
+
+    z_init_arrays = [
+        np.array(
+            [
+                [
+                    random.random() * (pi / 2 - (-pi / 2)) + (-pi / 2),
+                    random.random(),
+                    random.random(),
+                    z_init,
+                ]
+                for _ in range(pso_num_particles)
+            ]
+        )
+        for z_init in np.linspace(0, 1, num_data_points)
+    ]
+
+    init_map_with_init_arrays = [
+        ("epsilon", {}, epsilon_init_arrays, 0),
+        ("x", {}, x_init_arrays, 1),
+        ("y", {}, y_init_arrays, 2),
+        ("z", {}, z_init_arrays, 3),
+    ]
+
+    for name, init_map, init_arrays, value_pos in init_map_with_init_arrays:
+        for init_array in init_arrays:
+            cost, pos = general_pso_optimisation_handler(
+                num_dimensions=4,
+                bounds=pso_4_dimension_bounds,
+                objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+                objective_func_kwargs={
+                    "func_for_mse_diff_between_experimental_and_equation_generated_data": (
+                        calculate_mse_between_experimental_and_partial_solved_trig_equation_generated_data
+                    )
+                },
+                num_particles=pso_num_particles,
+                iterations=pso_num_iterations,
+                initial_position=init_array,
+            )
+
+            init_map[str(init_array[0][value_pos])] = (
+                cost,
+                pos.tolist(),
+            )
+
+        file_handler(
+            path=f"{name}_init_map.json",
+            mode="w",
+            func=lambda f: json.dump(init_map, f),
+        )
 
 
 if __name__ == "__main__":

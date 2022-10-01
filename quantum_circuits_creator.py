@@ -1,7 +1,5 @@
-import imp
-from typing import Dict, Tuple
-from qiskit.circuit import QuantumCircuit, Parameter, ClassicalRegister, Clbit
-import math
+from typing import Dict
+from qiskit.circuit import QuantumCircuit, Parameter
 import numpy as np
 
 
