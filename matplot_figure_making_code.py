@@ -5,39 +5,37 @@ import json
 
 mpl.use("pdf")
 
-plt.rc("font", family="serif", serif="Times")
-plt.rc("text", usetex=True)
-plt.rc("ytick", labelsize=8)
-plt.rc("axes", labelsize=8)
-
 # width as measured in inkscape
 width = 3.487
 height = width / 1.618
-
-
 title_size = 7
 alpha_value = 0.625
-fig, ax = plt.subplots(figsize=(width, height))
-plt.suptitle(
-    "Solutions For Varying Epsilon Initial Conditions",
-    fontsize=7,
-)
-ax.set_ylim([-1.0, 1.0])
-ax.set_xlim([-np.pi / 2, np.pi / 2])
 
-for file_name, graph_file_name in [
-    ("epsilon_init_map.json", "epsilon_init_graph.pdf"),
-    ("x_init_map.json", "x_init_graph.pdf"),
-    ("y_init_map.json", "y_init_graph.pdf"),
-    ("z_init_map.json", "z_init_graph.pdf"),
+plt.rc("font", family="serif", serif="Times")
+plt.rc("text", usetex=True)
+
+for parameter_name, x_axis_lim in [
+    ["epsilon", [-np.pi / 2, np.pi / 2]],
+    ["x", [0, 1.0]],
+    ["y", [0, 1.0]],
+    ["z", [0, 1.0]],
 ]:
-    init_data = json.load(open(file_name))
+
+    fig, ax = plt.subplots(figsize=(width, height))
+    fig.suptitle(
+        f"PSO Solutions For Various Initial {parameter_name.capitalize()} Values",
+        fontsize=title_size,
+    )
+    ax.set_ylim([-1.0, 1.0])
+    ax.set_xlim(x_axis_lim)
+
+    init_data = json.load(open(f"{parameter_name}_init_map.json"))
     x = []
     colour_map = {}
 
     graphing_data_map = {
         "mse": {"data": [], "colour": "r", "name": "MSE"},
-        "epsilon_sol": {"data": [], "colour": "b", "name": "Epsilon"},
+        "epsilon_sol": {"data": [], "colour": "b", "name": "epsilon"},
         "x_sol": {"data": [], "colour": "c", "name": "x"},
         "y_sol": {"data": [], "colour": "m", "name": "y"},
         "z_sol": {"data": [], "colour": "y", "name": "z"},
@@ -74,7 +72,7 @@ for file_name, graph_file_name in [
     )
 
     plt.ylabel("Values", fontsize=title_size - 1)
-    plt.xlabel("Various Init values", fontsize=title_size - 1)
+    plt.xlabel(f"Initial {parameter_name} value", fontsize=title_size - 1)
 
     box = ax.get_position()
     ax.set_position(
@@ -103,4 +101,4 @@ for file_name, graph_file_name in [
         columnspacing=1.0,
     )
 
-    fig.savefig(graph_file_name)
+    fig.savefig(f"{parameter_name}_init_graph.pdf")

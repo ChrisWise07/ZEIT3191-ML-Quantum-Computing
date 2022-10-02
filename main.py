@@ -646,7 +646,6 @@ def generate_init_array(
 
 
 def produce_init_maps() -> None:
-    # compare_bayes_pso_optimisation_for_various_equations()
     import json
 
     pso_num_particles = 25
@@ -655,6 +654,7 @@ def produce_init_maps() -> None:
         np.array([-pi / 2, 0, 0, 0]),
         np.array([pi / 2, 1, 1, 1]),
     )
+
     num_data_points = 10
     num_repeat = 5
 
@@ -702,47 +702,47 @@ def produce_init_maps() -> None:
         ],
     )
 
-    # init_map_with_init_arrays = [
-    #     ("epsilon", {}, epsilon_init_arrays, 0),
-    #     ("x", {}, x_init_arrays, 1),
-    #     ("y", {}, y_init_arrays, 2),
-    #     ("z", {}, z_init_arrays, 3),
-    # ]
+    init_map_with_init_arrays = [
+        ("epsilon", {}, epsilon_init_arrays, 0),
+        ("x", {}, x_init_arrays, 1),
+        ("y", {}, y_init_arrays, 2),
+        ("z", {}, z_init_arrays, 3),
+    ]
 
-    # for name, init_map, init_arrays, value_pos in init_map_with_init_arrays:
-    #     for init_array in init_arrays:
-    #         cost_list, pos_list = [], []
-    #         for _ in range(num_repeat):
-    #             cost, pos = general_pso_optimisation_handler(
-    #                 num_dimensions=4,
-    #                 bounds=pso_4_dimension_bounds,
-    #                 objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
-    #                 objective_func_kwargs={
-    #                     "prob_measuring_zero_equation_func": (
-    #                         partial_solved_trig_equation_for_kraus_probabilities_no_complex
-    #                     ),
-    #                     "kraus_prob_bounding_equation_func": (
-    #                         partial_solved_trig_probability_equation_for_measuring_zero_no_complex
-    #                     ),
-    #                 },
-    #                 num_particles=pso_num_particles,
-    #                 iterations=pso_num_iterations,
-    #                 initial_position=init_array,
-    #                 verbose=False,
-    #             )
-    #             cost_list.append(cost)
-    #             pos_list.append(pos)
+    for name, init_map, init_arrays, value_pos in init_map_with_init_arrays:
+        for init_array in init_arrays:
+            cost_list, pos_list = [], []
+            for _ in range(num_repeat):
+                cost, pos = general_pso_optimisation_handler(
+                    num_dimensions=4,
+                    bounds=pso_4_dimension_bounds,
+                    objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+                    objective_func_kwargs={
+                        "prob_measuring_zero_equation_func": (
+                            partial_solved_trig_equation_for_kraus_probabilities_no_complex
+                        ),
+                        "kraus_prob_bounding_equation_func": (
+                            partial_solved_trig_probability_equation_for_measuring_zero_no_complex
+                        ),
+                    },
+                    num_particles=pso_num_particles,
+                    iterations=pso_num_iterations,
+                    initial_position=init_array,
+                    verbose=False,
+                )
+                cost_list.append(cost)
+                pos_list.append(pos)
 
-    #         init_map[str(init_array[0][value_pos])] = (
-    #             np.mean(cost_list),
-    #             np.mean(pos_list, axis=0).tolist(),
-    #         )
+            init_map[str(init_array[0][value_pos])] = (
+                np.mean(cost_list),
+                np.mean(pos_list, axis=0).tolist(),
+            )
 
-    #     file_handler(
-    #         path=f"{name}_init_map.json",
-    #         mode="w",
-    #         func=lambda f: json.dump(init_map, f),
-    #     )
+        file_handler(
+            path=f"{name}_init_map.json",
+            mode="w",
+            func=lambda f: json.dump(init_map, f),
+        )
 
 
 def main():
