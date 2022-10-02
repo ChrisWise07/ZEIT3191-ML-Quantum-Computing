@@ -10,6 +10,7 @@ def trig_probability_equation_for_measuring_zero_no_complex(
     x: float,
     y: float,
     z: float,
+    l: float,
 ) -> float:
     """
     Probability of measuring zero given excited state.
@@ -41,6 +42,7 @@ def trig_probability_equation_for_measuring_zero_no_complex(
 def trig_kraus_probability_bounding_equation(
     theta: float,
     epsilon: float,
+    mu: float,
     x: float,
     y: float,
     z: float,
@@ -75,6 +77,7 @@ def static_probability_equation_for_measuring_zero_no_complex(
     x: float,
     y: float,
     z: float,
+    l: float,
 ) -> float:
     """ """
     return (1 / 2) * (
@@ -87,6 +90,8 @@ def static_probability_equation_for_measuring_zero_no_complex(
 @njit(cache=True)
 def static_kraus_probability_bounding_equation(
     theta: float,
+    epsilon: float,
+    mu: float,
     x: float,
     y: float,
     z: float,
@@ -148,4 +153,46 @@ def partial_solved_trig_equation_for_kraus_probabilities_no_complex(
     """
     return (-1 + x + y + z) * (
         -1 + np.cos(theta + epsilon * np.square(np.sin(theta / 2)))
+    )
+
+
+@njit(cache=True)
+def state_depedent_small_theta_no_complex_prob_equation(
+    theta: float,
+    epsilon: float,
+    x: float,
+    y: float,
+    z: float,
+) -> float:
+    return (
+        0.5
+        + np.cos(theta + epsilon * np.sin(0.5 * theta))
+        * (
+            0.48785
+            - 0.9757
+            * (x + y)
+            * np.sin(0.5 * (theta + epsilon * np.sin(0.5 * theta)))
+        )
+        + (
+            0.109555
+            - 0.219111
+            * (y + z)
+            * np.sin(0.5 * (theta + epsilon * np.sin(0.5 * theta)))
+        )
+        * np.sin(theta + epsilon * np.sin(0.5 * theta))
+    )
+
+
+@njit(cache=True)
+def state_dependent_small_theta_no_complex_kraus_bounding_equation(
+    theta: float,
+    epsilon: float,
+    x: float,
+    y: float,
+    z: float,
+) -> float:
+    return (
+        np.cos(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
+        + (x + y + z) * np.sin(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
+        - 1
     )

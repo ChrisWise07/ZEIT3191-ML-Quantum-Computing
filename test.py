@@ -7,6 +7,8 @@ from equations_for_prob_measuring_state import (
     static_kraus_probability_bounding_equation,
     partial_solved_trig_probability_equation_for_measuring_zero_no_complex,
     partial_solved_trig_equation_for_kraus_probabilities_no_complex,
+    state_depedent_small_theta_no_complex_prob_equation,
+    state_dependent_small_theta_no_complex_kraus_bounding_equation,
 )
 
 
@@ -213,7 +215,7 @@ def test_partial_solved_partial_solved_trig_equation_for_kraus_probabilities_no_
         round(
             partial_solved_trig_equation_for_kraus_probabilities_no_complex(
                 theta=0.0,
-                eplison=-1.0,
+                epsilon=-1.0,
                 x=1.0,
                 y=1.0,
                 z=48 / 101,
@@ -227,7 +229,7 @@ def test_partial_solved_partial_solved_trig_equation_for_kraus_probabilities_no_
         round(
             partial_solved_trig_equation_for_kraus_probabilities_no_complex(
                 theta=pi / 2,
-                eplison=-289 * pi,
+                epsilon=-289 * pi,
                 x=-3 / 10,
                 y=-21 / 5,
                 z=-23 / 10,
@@ -240,7 +242,7 @@ def test_partial_solved_partial_solved_trig_equation_for_kraus_probabilities_no_
     assert (
         round(
             partial_solved_trig_equation_for_kraus_probabilities_no_complex(
-                theta=pi, eplison=-9 / 5, x=-12 / 5, y=-1 / 2, z=39 / 10
+                theta=pi, epsilon=-9 / 5, x=-12 / 5, y=-1 / 2, z=39 / 10
             ),
             4,
         )
@@ -253,7 +255,7 @@ def test_partial_solved_equation_for_probability_of_measuring_one_no_complex():
         round(
             partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
                 theta=0.0,
-                eplison=1 / 2,
+                epsilon=1 / 2,
                 x=0.0310517,
                 y=0.0,
                 z=11 / 102,
@@ -265,7 +267,7 @@ def test_partial_solved_equation_for_probability_of_measuring_one_no_complex():
     assert (
         round(
             partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
-                theta=pi / 2, eplison=7 / 10, x=0.467884, y=3 / 34, z=10 / 51
+                theta=pi / 2, epsilon=7 / 10, x=0.467884, y=3 / 34, z=10 / 51
             ),
             4,
         )
@@ -275,11 +277,119 @@ def test_partial_solved_equation_for_probability_of_measuring_one_no_complex():
     assert (
         round(
             partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
-                theta=pi, eplison=-2 / 5, x=0.012232, y=0.0, z=61 / 102
+                theta=pi, epsilon=-2 / 5, x=0.012232, y=0.0, z=61 / 102
             ),
             4,
         )
         == 0.0549
+    )
+
+
+def test_state_depedent_small_theta_no_complex_prob_equation() -> None:
+    assert (
+        round(
+            state_depedent_small_theta_no_complex_prob_equation(
+                theta=0.0,
+                epsilon=5.0,
+                x=5.0,
+                y=5.0,
+                z=5,
+            ),
+            5,
+        )
+        == 0.98785
+    )
+
+    assert (
+        round(
+            state_depedent_small_theta_no_complex_prob_equation(
+                theta=0.0,
+                epsilon=0.0,
+                x=0.0,
+                y=0.0,
+                z=0.0,
+            ),
+            5,
+        )
+        == 0.98785
+    )
+
+    assert (
+        round(
+            state_depedent_small_theta_no_complex_prob_equation(
+                theta=pi / 2,
+                epsilon=-0.700509,
+                x=1.23549,
+                y=0.598183,
+                z=-2.24748,
+            ),
+            5,
+        )
+        == 0.55555
+    )
+
+    assert (
+        round(
+            state_depedent_small_theta_no_complex_prob_equation(
+                theta=pi, epsilon=0.367796, x=2.81639, y=-2.7732, z=2.20524
+            ),
+            5,
+        )
+        == 0.00005
+    )
+
+
+def test_state_dependent_small_theta_no_complex_kraus_bounding_equation() -> None:
+    assert (
+        round(
+            state_dependent_small_theta_no_complex_kraus_bounding_equation(
+                theta=0.0,
+                epsilon=5.0,
+                x=5.0,
+                y=5.0,
+                z=5,
+            ),
+            5,
+        )
+        == 0.0
+    )
+
+    assert (
+        round(
+            state_dependent_small_theta_no_complex_kraus_bounding_equation(
+                theta=0.0,
+                epsilon=0.0,
+                x=0.0,
+                y=0.0,
+                z=0.0,
+            ),
+            5,
+        )
+        == 0.0
+    )
+
+    assert (
+        round(
+            state_dependent_small_theta_no_complex_kraus_bounding_equation(
+                theta=pi / 2,
+                epsilon=-2.22144,
+                x=-2.95459,
+                y=3.16666,
+                z=1.37721,
+            ),
+            5,
+        )
+        == 0.0
+    )
+
+    assert (
+        round(
+            state_dependent_small_theta_no_complex_kraus_bounding_equation(
+                theta=pi, epsilon=-3.14159, x=0.612319, y=0.488268, z=2.34799
+            ),
+            5,
+        )
+        == 0.0
     )
 
 
@@ -290,3 +400,5 @@ if __name__ == "__main__":
     test_static_kraus_bonding_equation()
     test_partial_solved_partial_solved_trig_equation_for_kraus_probabilities_no_complex()
     test_partial_solved_equation_for_probability_of_measuring_one_no_complex()
+    test_state_depedent_small_theta_no_complex_prob_equation()
+    test_state_dependent_small_theta_no_complex_kraus_bounding_equation()
