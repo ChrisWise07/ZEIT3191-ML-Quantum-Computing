@@ -629,26 +629,15 @@ def compare_bayes_pso_optimisation_for_various_equations() -> None:
 
 
 def generate_init_array(
-    linspace: np.ndarray, num_pso_particles: int, position_of_init_value: int
+    linspace: np.ndarray,
+    num_pso_particles: int,
+    list_generating_func: Callable[[int], Tuple[float]],
 ) -> List[np.ndarray]:
 
     return [
         np.array(
             [
-                [
-                    init_value
-                    if position_of_init_value == 0
-                    else random.uniform(-pi / 2, pi / 2),
-                    init_value
-                    if position_of_init_value == 1
-                    else random.uniform(0, 0),
-                    init_value
-                    if position_of_init_value == 2
-                    else random.uniform(0, 0),
-                    init_value
-                    if position_of_init_value == 3
-                    else random.uniform(0, 0),
-                ]
+                list_generating_func(init_value)
                 for _ in range(num_pso_particles)
             ]
         )
@@ -672,68 +661,88 @@ def produce_init_maps() -> None:
     epsilon_init_arrays = generate_init_array(
         np.linspace(-pi / 2, pi / 2, num_data_points),
         pso_num_particles,
-        position_of_init_value=0,
+        list_generating_func=lambda init_value: [
+            init_value,
+            random.uniform(0, 1),
+            random.uniform(0, 1),
+            random.uniform(0, 1),
+        ],
     )
 
     x_init_arrays = generate_init_array(
         np.linspace(0, 1, num_data_points),
         pso_num_particles,
-        position_of_init_value=1,
+        list_generating_func=lambda init_value: [
+            random.uniform(-pi / 2, pi / 2),
+            init_value,
+            random.uniform(0, 1),
+            random.uniform(0, 1),
+        ],
     )
 
     y_init_arrays = generate_init_array(
         np.linspace(0, 1, num_data_points),
         pso_num_particles,
-        position_of_init_value=2,
+        list_generating_func=lambda init_value: [
+            random.uniform(-pi / 2, pi / 2),
+            random.uniform(0, 1),
+            init_value,
+            random.uniform(0, 1),
+        ],
     )
 
     z_init_arrays = generate_init_array(
         np.linspace(0, 1, num_data_points),
         pso_num_particles,
-        position_of_init_value=3,
+        list_generating_func=lambda init_value: [
+            random.uniform(-pi / 2, pi / 2),
+            random.uniform(0, 1),
+            random.uniform(0, 1),
+            init_value,
+        ],
     )
 
-    init_map_with_init_arrays = [
-        ("epsilon", {}, epsilon_init_arrays, 0),
-        ("x", {}, x_init_arrays, 1),
-        ("y", {}, y_init_arrays, 2),
-        ("z", {}, z_init_arrays, 3),
-    ]
+    # init_map_with_init_arrays = [
+    #     ("epsilon", {}, epsilon_init_arrays, 0),
+    #     ("x", {}, x_init_arrays, 1),
+    #     ("y", {}, y_init_arrays, 2),
+    #     ("z", {}, z_init_arrays, 3),
+    # ]
 
-    for name, init_map, init_arrays, value_pos in init_map_with_init_arrays:
-        for init_array in init_arrays:
-            cost_list, pos_list = [], []
-            for _ in range(num_repeat):
-                cost, pos = general_pso_optimisation_handler(
-                    num_dimensions=4,
-                    bounds=pso_4_dimension_bounds,
-                    objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
-                    objective_func_kwargs={
-                        "prob_measuring_zero_equation_func": (
-                            partial_solved_trig_equation_for_kraus_probabilities_no_complex
-                        ),
-                        "kraus_prob_bounding_equation_func": (
-                            partial_solved_trig_probability_equation_for_measuring_zero_no_complex
-                        ),
-                    },
-                    num_particles=pso_num_particles,
-                    iterations=pso_num_iterations,
-                    initial_position=init_array,
-                    verbose=False,
-                )
-                cost_list.append(cost)
-                pos_list.append(pos)
+    # for name, init_map, init_arrays, value_pos in init_map_with_init_arrays:
+    #     for init_array in init_arrays:
+    #         cost_list, pos_list = [], []
+    #         for _ in range(num_repeat):
+    #             cost, pos = general_pso_optimisation_handler(
+    #                 num_dimensions=4,
+    #                 bounds=pso_4_dimension_bounds,
+    #                 objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+    #                 objective_func_kwargs={
+    #                     "prob_measuring_zero_equation_func": (
+    #                         partial_solved_trig_equation_for_kraus_probabilities_no_complex
+    #                     ),
+    #                     "kraus_prob_bounding_equation_func": (
+    #                         partial_solved_trig_probability_equation_for_measuring_zero_no_complex
+    #                     ),
+    #                 },
+    #                 num_particles=pso_num_particles,
+    #                 iterations=pso_num_iterations,
+    #                 initial_position=init_array,
+    #                 verbose=False,
+    #             )
+    #             cost_list.append(cost)
+    #             pos_list.append(pos)
 
-            init_map[str(init_array[0][value_pos])] = (
-                np.mean(cost_list),
-                np.mean(pos_list, axis=0).tolist(),
-            )
+    #         init_map[str(init_array[0][value_pos])] = (
+    #             np.mean(cost_list),
+    #             np.mean(pos_list, axis=0).tolist(),
+    #         )
 
-        file_handler(
-            path=f"{name}_init_map.json",
-            mode="w",
-            func=lambda f: json.dump(init_map, f),
-        )
+    #     file_handler(
+    #         path=f"{name}_init_map.json",
+    #         mode="w",
+    #         func=lambda f: json.dump(init_map, f),
+    #     )
 
 
 def main():
