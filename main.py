@@ -745,11 +745,85 @@ def produce_init_maps() -> None:
         )
 
 
+def generate_list_of_primes(num_primes: int) -> List[int]:
+    primes = [2]
+    num = 3
+    while len(primes) < num_primes:
+        if all(num % prime != 0 for prime in primes):
+            primes.append(num)
+        num += 2
+    return primes
+
+
+def generate_list_of_2_to_power_n(num_powers: int) -> np.ndarray:
+    return np.array([2**x for x in range(1, num_powers + 1)])
+
+
+def calculate_data_from_expontential_equation(
+    x_axis_values: np.ndarray, a: float, b: float, c: float, d: float, e: float
+) -> np.ndarray:
+    return np.array([(a * (e ** (b * (x - c)))) - d for x in x_axis_values])
+
+
+def pso_wrapper_for_mse_difference_for_parameter_estimation(
+    list_of_particle_params: np.ndarray,
+    experimental_data: np.ndarray,
+    x_axis_values: np.ndarray,
+    data_generation_equation: Callable,
+) -> np.ndarray:
+    """
+    Wrapper function using the PSO algorithm to find the minimum mse
+    between measured probability distribution and calculated
+    probabilities from static probability equation.
+
+    Args:
+        particle_params: The parameters for the particle.
+
+    Returns:
+        The mse between the measured probability distribution and the
+        calculated probability distribution.
+    """
+    return np.array(
+        [
+            calculate_mse_between_experimental_and_simulated_data(
+                experimental_data=experimental_data,
+                simulated_data=data_generation_equation(
+                    x_axis_values, *particle_params
+                ),
+            )
+            for particle_params in list_of_particle_params
+        ]
+    )
+
+
 def main():
     """
     Main function.
     """
-    produce_init_maps()
+    pso_num_particles = 50
+    pso_num_iterations = 10000
+    num_x_axis_values = 10
+
+    x_axis_values = np.arange(1, num_x_axis_values + 1)
+    experimental_data = generate_list_of_2_to_power_n(
+        num_x_axis_values
+    ) - generate_list_of_primes(num_x_axis_values)
+
+    general_pso_optimisation_handler(
+        num_dimensions=5,
+        bounds=(
+            np.array([0, 0, -10, -10, 0]),
+            np.array([10] * 5),
+        ),
+        objective_func=pso_wrapper_for_mse_difference_for_parameter_estimation,
+        objective_func_kwargs={
+            "experimental_data": experimental_data,
+            "x_axis_values": x_axis_values,
+            "data_generation_equation": calculate_data_from_expontential_equation,
+        },
+        num_particles=pso_num_particles,
+        iterations=pso_num_iterations,
+    )
 
 
 if __name__ == "__main__":
