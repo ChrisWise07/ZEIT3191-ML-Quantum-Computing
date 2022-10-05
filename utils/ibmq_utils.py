@@ -7,6 +7,33 @@ from qiskit.providers.fake_provider import FakeProvider
 from qiskit.providers.exceptions import QiskitBackendNotFoundError
 
 
+def __return_ibmq_provider() -> IBMQBackend:
+    """
+    Returns IBMQ provider.
+
+    Returns:
+        IBMQ provider.
+    """
+    IBMQ.load_account()
+    return IBMQ.get_provider("ibm-q")
+
+
+def return_specific_backend(
+    backend_name: str,
+) -> IBMQBackend:
+    """
+    Returns specific backend.
+
+    Args:
+        backend_name: Name of the backend.
+
+    Returns:
+        Backend.
+    """
+
+    return __return_ibmq_provider().get_backend(backend_name)
+
+
 def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
     num_required_qubits: int = 5,
 ) -> IBMQBackend:
@@ -20,11 +47,7 @@ def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
     shortest_queue_length = float("inf")
     backend_with_shortest_queue = None
 
-    IBMQ.load_account()
-
-    provider = IBMQ.get_provider("ibm-q")
-
-    for backend in provider.backends():
+    for backend in __return_ibmq_provider().backends():
         try:
             num_qubits = len(backend.properties().qubits)
         except AttributeError:
@@ -52,11 +75,7 @@ def return_live_and_fake_backend_with_shortest_queue(
     """
     backend_num_qubit_map = {}
 
-    IBMQ.load_account()
-
-    provider = IBMQ.get_provider("ibm-q")
-
-    for backend in provider.backends():
+    for backend in __return_ibmq_provider().backends():
         try:
             num_qubits = len(backend.properties().qubits)
             if num_qubits > num_required_qubits:
