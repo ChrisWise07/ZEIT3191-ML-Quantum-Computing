@@ -1,9 +1,18 @@
-import random
-import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import numpy as np
+import openpyxl
+
 from qiskit.circuit import QuantumCircuit
-from qiskit.tools.monitor import job_monitor
-from math import pi
+from qiskit.providers.aer import AerSimulator
+from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from graphing_funs import (
+    draw_3d_graphs_for_various_qubit_initialisations_probability_data,
+    draw_2d_graphs_for_various_qubit_initialisations_probability_data,
+)
+from utils.ibmq_utils import (
+    return_live_and_fake_backend_with_shortest_queue,
+    return_specific_backend,
+)
 from quantum_circuits_creator import (
     single_qubit_with_unitary_operation_applied_d_times,
 )
@@ -12,11 +21,6 @@ from utils.general_utils import (
     return_init_np_array_for_single_qubit,
     calculate_mse_between_two_distributions,
 )
-from utils.ibmq_utils import return_live_and_fake_backend_with_shortest_queue
-from qiskit.providers.aer import AerSimulator
-from qiskit.providers.ibmq.ibmqbackend import IBMQBackend
-import matplotlib.pyplot as plt
-import numpy as np
 from equations_for_prob_measuring_state import (
     trig_probability_equation_for_measuring_zero_no_complex,
     trig_kraus_probability_bounding_equation,
@@ -27,17 +31,13 @@ from equations_for_prob_measuring_state import (
     state_dependent_small_theta_no_complex_kraus_bounding_equation,
     state_depedent_small_theta_no_complex_prob_equation,
 )
-import openpyxl
-from numba import njit
-
-
-EPSILON = 0.0001
 
 SIMULATOR = []  # type: List[AerSimulator]
 
 TOTAL_NUM_SHOTS = 20000
 
 NUM_OF_THETA_VALUES = 100
+
 THETA_VALUES = np.linspace(0, np.pi, NUM_OF_THETA_VALUES)
 
 
@@ -62,24 +62,8 @@ def return_large_scale_prob_distro(
 EXPERIMENT_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro(
     theta_range=[3, 3 + NUM_OF_THETA_VALUES],
     phi_range=[5, 6],
-    workbook_name="results/probability_data_3.xlsx",
+    workbook_name="results/probability_data_only_theta.xlsx",
 )
-
-
-def plot_ket_distribution(ket_distribution: dict) -> None:
-    """
-    Plots the given ket distribution.
-
-    Args:
-        ket_distribution:
-            A dictionary mapping ket states to their frequency.
-    """
-    plt.bar(
-        list(ket_distribution.keys()),
-        list(ket_distribution.values()),
-        color="blue",
-    )
-    plt.savefig("noise_probability_test_custom_ugate.png")
 
 
 def execute_and_return_counts_of_values(
@@ -118,6 +102,7 @@ def execute_and_return_counts_of_values_while_monitoring(
         The counts of the values.
     """
     from qiskit import execute
+    from qiskit.tools.monitor import job_monitor
 
     job = execute(circuit, backend=SIMULATOR[0], shots=TOTAL_NUM_SHOTS)
 
@@ -138,35 +123,6 @@ def print_circuit_to_file(circuit: QuantumCircuit):
         mode="w",
         func=lambda f: f.write(circuit.draw(output="text")),
     )
-
-
-def plot_line_graph_results(
-    x_axis_values: List[float],
-    y_axis_values: List[float],
-    x_axis_label: str,
-    y_axis_label: str,
-    title: str,
-):
-    """
-    Plots the given x and y axis values.
-
-    Args:
-        x_axis_values: The x axis values to plot.
-        y_axis_values: The y axis values to plot.
-        x_axis_label: The label for the x axis.
-        y_axis_label: The label for the y axis.
-    """
-    plt.plot(
-        x_axis_values,
-        y_axis_values,
-        color="red",
-        marker="o",
-    )
-    plt.title(title, fontsize=14)
-    plt.xlabel(x_axis_label, fontsize=14)
-    plt.ylabel(y_axis_label, fontsize=14)
-    plt.grid(True)
-    return plt
 
 
 def return_live_and_equivalent_fake_backend(
@@ -265,27 +221,6 @@ def general_pso_optimisation_handler(
     return cost, pos
 
 
-@njit(cache=True)
-def calculate_mse_between_experimental_and_simulated_data(
-    simulated_data: np.ndarray,
-    experimental_data: np.ndarray = EXPERIMENT_PROBABILITY_DISTRIBUTION,
-) -> float:
-    """
-    Calculates the mean squared error between the experimental and simulated
-    data.
-
-    Args:
-        experimental_data: The experimental data.
-        simulated_data: The simulated data.
-
-    Returns:
-        The mean squared error between the experimental and simulated data.
-    """
-    return calculate_mse_between_two_distributions(
-        dist_1=simulated_data, dist_2=experimental_data
-    )
-
-
 def generate_prob_data_over_theta(
     prob_measuring_zero_equation_func: Callable,
     kraus_prob_bounding_equation_func: Callable,
@@ -319,6 +254,7 @@ def pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation(
     list_of_particle_params: np.ndarray,
     prob_measuring_zero_equation_func: Callable,
     kraus_prob_bounding_equation_func: Callable,
+    experimental_data: np.ndarray = EXPERIMENT_PROBABILITY_DISTRIBUTION,
 ) -> np.ndarray:
     """
     Wrapper function using the PSO algorithm to find the minimum mse
@@ -334,12 +270,13 @@ def pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation(
     """
     return np.array(
         [
-            calculate_mse_between_experimental_and_simulated_data(
-                simulated_data=generate_prob_data_over_theta(
+            calculate_mse_between_two_distributions(
+                dist_1=experimental_data,
+                dist_2=generate_prob_data_over_theta(
                     prob_measuring_zero_equation_func=prob_measuring_zero_equation_func,
                     kraus_prob_bounding_equation_func=kraus_prob_bounding_equation_func,
                     args_for_equation_funcs=particle_params,
-                )
+                ),
             )
             for particle_params in list_of_particle_params
         ]
@@ -347,7 +284,7 @@ def pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation(
 
 
 def return_data_from_live_execution_over_range_of_circuits(
-    number_of_theta_angles: int, number_of_phi_angles: int
+    theta_values: np.ndarray, phi_values: np.ndarray
 ) -> List[Dict[str, int]]:
     return execute_and_return_counts_of_values_while_monitoring(
         [
@@ -360,116 +297,73 @@ def return_data_from_live_execution_over_range_of_circuits(
                     phi=phi,
                 ),
             )
-            for theta in np.linspace(0, np.pi, number_of_theta_angles)
-            for phi in np.linspace(0, 2 * np.pi, number_of_phi_angles)
+            for theta in theta_values
+            for phi in phi_values
         ]
     )
 
 
 def save_data_to_excel_sheet(
     data: List[Dict[str, int]],
-    row_range: Tuple[int, int],
-    column_range: Tuple[int, int],
+    starting_row: int,
+    theta_values: np.ndarray,
+    theta_column_num: int,
+    starting_column: int,
+    phi_values: np.ndarray,
     workbook: openpyxl.Workbook,
 ) -> None:
     """
     Saves data from data to cells in excel spreadsheet
     """
-
     sheet = workbook.active
-    theta_values = np.linspace(0, np.pi, row_range[1] - row_range[0])
 
-    [
-        sheet.cell(
-            row=theta_index,
-            column=phi_index,
-            value=data.pop(0).get("0", 0) / TOTAL_NUM_SHOTS,
-        )
-        and sheet.cell(
-            row=theta_index,
-            column=phi_index - 1,
-            value=theta_values[theta_index - row_range[0]],
-        )
-        for theta_index in range(*row_range)
-        for phi_index in range(*column_range)
-    ]
+    if len(theta_values) > 1:
+        for theta_index, theta in enumerate(theta_values, start=starting_row):
+            sheet.cell(row=theta_index, column=theta_column_num).value = theta
 
-    workbook.save("results/probability_data.xlsx")
+    if len(phi_values) > 1:
+        for phi_index, phi in enumerate(phi_values, start=starting_column):
+            sheet.cell(row=starting_row - 1, column=phi_index).value = phi
+
+    for theta_index in range(starting_row, len(theta_values) + starting_row):
+        for phi_index in range(
+            starting_column, len(phi_values) + starting_column
+        ):
+            sheet.cell(row=theta_index, column=phi_index).value = (
+                data.pop(0).get("0", 0) / TOTAL_NUM_SHOTS
+            )
 
 
-def find_probability_data_for_various_qubit_initialisations() -> None:
+def find_probability_data_for_various_qubit_initialisations(
+    num_theta_values: int,
+    num_phi_values: int,
+    starting_row: int,
+    starting_column: int,
+    theta_column_num: int,
+    workbook_name: str,
+) -> None:
     """
     Over a range of initialisation values find probability of measuring
     0 and record in excel spread sheet
     """
-    starting_row, starting_column = 3, 5
-    live_backend, fake_backend = return_live_and_equivalent_fake_backend(
-        noisy_simulation=True, num_required_qubits=1
-    )
-    print(f"Using {live_backend}")
-    SIMULATOR.append(live_backend)
-
-    total_num_theta_angles = 100
-    total_num_phi_angles = 1
-
-    workbook_name = "results/probability_data_3.xlsx"
     workbook = openpyxl.load_workbook(workbook_name)
+
+    theta_values = np.linspace(0, np.pi, num_theta_values)
+    phi_values = np.linspace(0, 2 * np.pi, num_phi_values, endpoint=False)
 
     save_data_to_excel_sheet(
         data=return_data_from_live_execution_over_range_of_circuits(
-            number_of_theta_angles=total_num_theta_angles,
-            number_of_phi_angles=total_num_phi_angles,
+            theta_values=theta_values, phi_values=phi_values
         ),
-        row_range=(starting_row, starting_row + total_num_theta_angles),
-        column_range=(
-            starting_column,
-            starting_column + total_num_phi_angles,
-        ),
+        starting_row=starting_row,
+        theta_values=theta_values,
+        theta_column_num=theta_column_num,
+        starting_column=starting_column,
+        phi_values=phi_values,
         workbook=workbook,
     )
 
     workbook.save(workbook_name)
-
-
-def draw_graphs_for_various_qubit_initialisations_probability_data() -> None:
-    """
-    Draw graphs for various qubit initialisations
-    """
-    starting_row, starting_column = 20, 3
-    workbook = openpyxl.load_workbook("results/probability_data.xlsx")
-    sheet = workbook.active
-    fig = plt.figure()
-
-    ax = fig.add_subplot(111, projection="3d")
-
-    theta_axis_data = [
-        value
-        for theta_index in range(12)
-        for value in [theta_index * np.pi / 6] * 12
-    ]
-
-    phi_axis_data = [phi_index * np.pi / 6 for phi_index in range(12)] * 12
-
-    probability_axis_data = [
-        sheet.cell(
-            row=starting_row + theta_index,
-            column=starting_column + phi_index,
-        ).value
-        for theta_index in range(12)
-        for phi_index in range(12)
-    ]
-
-    ax.scatter(
-        theta_axis_data,
-        phi_axis_data,
-        probability_axis_data,
-    )
-
-    ax.set_xlabel("theta")
-    ax.set_ylabel("phi")
-    ax.set_zlabel("probability of measuring 0")
-
-    plt.savefig("results/probability_of_measuring_zero_data.png")
 
 
 def draw_and_save_circuit_diagram(circuit: QuantumCircuit, path: str) -> None:
@@ -489,11 +383,11 @@ def compare_bayes_pso_optimisation_for_various_equations() -> None:
     pso_num_particles = 50
     pso_num_iterations = 2500
     pso_6_dimension_bounds = (
-        np.array([-pi / 2, -pi / 2, 0, 0, 0, 0]),
-        np.array([pi / 2, pi / 2, 1, 1, 1, 1]),
+        np.array([-np.pi / 2, -np.pi / 2, 0, 0, 0, 0]),
+        np.array([np.pi / 2, np.pi / 2, 1, 1, 1, 1]),
     )
     pso_4_dimension_bounds = (
-        np.array([-pi / 2, 0, 0, 0]),
+        np.array([-np.pi / 2, 0, 0, 0]),
         np.array([pi / 2, 1, 1, 1]),
     )
 
@@ -647,6 +541,7 @@ def generate_init_array(
 
 def produce_init_maps() -> None:
     import json
+    import random
 
     pso_num_particles = 25
     pso_num_iterations = 1000
@@ -695,7 +590,7 @@ def produce_init_maps() -> None:
         np.linspace(0, 1, num_data_points),
         pso_num_particles,
         list_generating_func=lambda init_value: [
-            random.uniform(-pi / 2, pi / 2),
+            random.uniform(-pi / 2, np.pi / 2),
             random.uniform(0, 1),
             random.uniform(0, 1),
             init_value,
@@ -745,54 +640,27 @@ def produce_init_maps() -> None:
         )
 
 
-def generate_list_of_primes(num_primes: int) -> List[int]:
-    primes = [2]
-    num = 3
-    while len(primes) < num_primes:
-        if all(num % prime != 0 for prime in primes):
-            primes.append(num)
-        num += 2
-    return primes
+def execute_data_gathering_experiment() -> None:
+    live_backend = return_specific_backend("ibmq_quito")
+    print(f"Using {live_backend}")
+    SIMULATOR.append(live_backend)
 
+    find_probability_data_for_various_qubit_initialisations(
+        num_theta_values=10,
+        num_phi_values=10,
+        starting_row=18,
+        starting_column=3,
+        theta_column_num=2,
+        workbook_name="results/probability_data_theta_and_phi.xlsx",
+    )
 
-def generate_list_of_2_to_power_n(num_powers: int) -> np.ndarray:
-    return np.array([2**x for x in range(1, num_powers + 1)])
-
-
-def calculate_data_from_expontential_equation(
-    x_axis_values: np.ndarray, a: float, b: float, c: float, d: float, e: float
-) -> np.ndarray:
-    return np.array([(a * (e ** (b * (x - c)))) - d for x in x_axis_values])
-
-
-def pso_wrapper_for_mse_difference_for_parameter_estimation(
-    list_of_particle_params: np.ndarray,
-    experimental_data: np.ndarray,
-    x_axis_values: np.ndarray,
-    data_generation_equation: Callable,
-) -> np.ndarray:
-    """
-    Wrapper function using the PSO algorithm to find the minimum mse
-    between measured probability distribution and calculated
-    probabilities from static probability equation.
-
-    Args:
-        particle_params: The parameters for the particle.
-
-    Returns:
-        The mse between the measured probability distribution and the
-        calculated probability distribution.
-    """
-    return np.array(
-        [
-            calculate_mse_between_experimental_and_simulated_data(
-                experimental_data=experimental_data,
-                simulated_data=data_generation_equation(
-                    x_axis_values, *particle_params
-                ),
-            )
-            for particle_params in list_of_particle_params
-        ]
+    find_probability_data_for_various_qubit_initialisations(
+        num_theta_values=100,
+        num_phi_values=1,
+        starting_row=2,
+        starting_column=3,
+        theta_column_num=1,
+        workbook_name="results/probability_data_only_theta.xlsx",
     )
 
 
@@ -800,30 +668,33 @@ def main():
     """
     Main function.
     """
-    pso_num_particles = 50
-    pso_num_iterations = 10000
-    num_x_axis_values = 10
-
-    x_axis_values = np.arange(1, num_x_axis_values + 1)
-    experimental_data = generate_list_of_2_to_power_n(
-        num_x_axis_values
-    ) - generate_list_of_primes(num_x_axis_values)
-
-    general_pso_optimisation_handler(
-        num_dimensions=5,
-        bounds=(
-            np.array([0, 0, -10, -10, 0]),
-            np.array([10] * 5),
-        ),
-        objective_func=pso_wrapper_for_mse_difference_for_parameter_estimation,
-        objective_func_kwargs={
-            "experimental_data": experimental_data,
-            "x_axis_values": x_axis_values,
-            "data_generation_equation": calculate_data_from_expontential_equation,
+    draw_3d_graphs_for_various_qubit_initialisations_probability_data(
+        theta_values=np.linspace(0, np.pi, 10),
+        phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
+        starting_row_in_spreadsheet=18,
+        starting_column_in_spreadsheet=3,
+        workbook_name="results/probability_data_theta_and_phi.xlsx",
+        plot_name="results/probability_over_theta_and_phi.pdf",
+        graph_details={
+            "title": "Probability of measuring 0 for various qubit initialisation angles",
+            "x_axis_label": "Theta",
+            "y_axis_label": "Phi",
+            "z_axis_label": "Probability of measuring 0",
         },
-        num_particles=pso_num_particles,
-        iterations=pso_num_iterations,
     )
+
+    # draw_2d_graphs_for_various_qubit_initialisations_probability_data(
+    #     theta_values=np.linspace(0, np.pi, 100),
+    #     starting_row_in_spreadsheet=2,
+    #     starting_column_in_spreadsheet=3,
+    #     workbook_name="results/probability_data_only_theta.xlsx",
+    #     plot_name="results/probability_over_theta.pdf",
+    #     graph_details={
+    #         "title": "Probability of measuring 0 for various qubit initialisation angles",
+    #         "x_axis_label": "Theta",
+    #         "y_axis_label": "Probability of measuring 0",
+    #     },
+    # )
 
 
 if __name__ == "__main__":
