@@ -111,7 +111,7 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
     box = ax.get_position()
     ax.set_position(
         [
-            box.x0 - box.width * 0.1,
+            box.x0 - box.width * 0.05,
             box.y0 + box.height * 0.0,
             box.width * 1.0,
             box.height * 1.0,
@@ -178,9 +178,9 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
     box = ax.get_position()
     ax.set_position(
         [
-            box.x0 - box.width * 0.0,
+            box.x0 + box.width * 0.05,
             box.y0 + box.height * 0.05,
-            box.width * 1.075,
+            box.width * 1.00,
             box.height * 0.95,
         ]
     )

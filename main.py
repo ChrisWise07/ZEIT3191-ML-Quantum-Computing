@@ -111,17 +111,18 @@ def execute_and_return_counts_of_values_while_monitoring(
     return job.result().get_counts()
 
 
-def print_circuit_to_file(circuit: QuantumCircuit):
+def print_circuit_to_file(circuit: QuantumCircuit, file_name: str) -> None:
     """
     Prints the given circuit to a file.
 
     Args:
         circuit: The circuit to print.
+        file_name: The name of the file to print to.
     """
     file_handler(
-        path="entangled_cnot_circuit.txt",
+        path=file_name,
         mode="w",
-        func=lambda f: f.write(circuit.draw(output="text")),
+        func=lambda f: f.write(circuit.draw(output="mpl")),
     )
 
 
@@ -664,28 +665,25 @@ def execute_data_gathering_experiment() -> None:
     )
 
 
-def main():
-    """
-    Main function.
-    """
+def graphing_probability_data() -> None:
     theta_string = r"$\theta$"
     phi_string = r"$\phi$"
     zero_ket_string = r"$\left|0\right\rangle$"
 
-    # draw_3d_graphs_for_various_qubit_initialisations_probability_data(
-    #     theta_values=np.linspace(0, np.pi, 10),
-    #     phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
-    #     starting_row_in_spreadsheet=18,
-    #     starting_column_in_spreadsheet=3,
-    #     workbook_name="results/probability_data_theta_and_phi.xlsx",
-    #     plot_name="results/probability_over_theta_and_phi.pdf",
-    #     graph_details={
-    #         "title": f"Probability of measuring {zero_ket_string} for various {theta_string} and {phi_string} values",
-    #         "x_axis_label": theta_string,
-    #         "y_axis_label": phi_string,
-    #         "z_axis_label": f"Probability of measuring {zero_ket_string}",
-    #     },
-    # )
+    draw_3d_graphs_for_various_qubit_initialisations_probability_data(
+        theta_values=np.linspace(0, np.pi, 10),
+        phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
+        starting_row_in_spreadsheet=18,
+        starting_column_in_spreadsheet=3,
+        workbook_name="results/probability_data_theta_and_phi.xlsx",
+        plot_name="results/probability_over_theta_and_phi.pdf",
+        graph_details={
+            "title": f"Probability of measuring {zero_ket_string} for various {theta_string} and {phi_string} values",
+            "x_axis_label": theta_string,
+            "y_axis_label": phi_string,
+            "z_axis_label": f"Probability of measuring {zero_ket_string}",
+        },
+    )
 
     draw_3d_graphs_for_various_qubit_initialisations_probability_data(
         theta_values=np.linspace(0, np.pi, 10),
@@ -695,40 +693,52 @@ def main():
         workbook_name="results/probability_data_theta_and_phi.xlsx",
         plot_name="results/probability_error_data_over_theta_and_phi.pdf",
         graph_details={
-            "title": f"Error for various {theta_string} and {phi_string} values",
+            "title": f"Mean Sqaured Error for various {theta_string} and {phi_string} values",
             "x_axis_label": theta_string,
             "y_axis_label": phi_string,
-            "z_axis_label": f"Error",
+            "z_axis_label": f"Mean Sqaured Error",
         },
-        z_limit=0.06,
+        z_limit=0.003,
     )
 
-    # draw_2d_graphs_for_various_qubit_initialisations_probability_data(
-    #     theta_values=np.linspace(0, np.pi, 100),
-    #     starting_row_in_spreadsheet=2,
-    #     starting_column_in_spreadsheet=3,
-    #     workbook_name="results/probability_data_only_theta.xlsx",
-    #     plot_name="results/probability_over_theta.pdf",
-    #     graph_details={
-    #         "title": f"Probability of measuring {zero_ket_string} for various {theta_string} values",
-    #         "x_axis_label": theta_string,
-    #         "y_axis_label": f"Probability of measuring {zero_ket_string}",
-    #     },
-    # )
+    draw_2d_graphs_for_various_qubit_initialisations_probability_data(
+        theta_values=np.linspace(0, np.pi, 100),
+        starting_row_in_spreadsheet=2,
+        starting_column_in_spreadsheet=3,
+        workbook_name="results/probability_data_only_theta.xlsx",
+        plot_name="results/probability_over_theta.pdf",
+        graph_details={
+            "title": f"Probability of measuring {zero_ket_string} for various {theta_string} values",
+            "x_axis_label": theta_string,
+            "y_axis_label": f"Probability of measuring {zero_ket_string}",
+        },
+    )
 
-    # draw_2d_graphs_for_various_qubit_initialisations_probability_data(
-    #     theta_values=np.linspace(0, np.pi, 100),
-    #     starting_row_in_spreadsheet=2,
-    #     starting_column_in_spreadsheet=5,
-    #     workbook_name="results/probability_data_only_theta.xlsx",
-    #     plot_name="results/probability_error_data_only_theta.pdf",
-    #     graph_details={
-    #         "title": f"Error for various {theta_string} values",
-    #         "x_axis_label": theta_string,
-    #         "y_axis_label": f"Error",
-    #     },
-    #     y_limit=0.06,
-    # )
+    draw_2d_graphs_for_various_qubit_initialisations_probability_data(
+        theta_values=np.linspace(0, np.pi, 100),
+        starting_row_in_spreadsheet=2,
+        starting_column_in_spreadsheet=5,
+        workbook_name="results/probability_data_only_theta.xlsx",
+        plot_name="results/probability_error_data_only_theta.pdf",
+        graph_details={
+            "title": f"Mean Sqaured Error for various {theta_string} values",
+            "x_axis_label": theta_string,
+            "y_axis_label": f"Mean Sqaured Error",
+        },
+        y_limit=0.003,
+    )
+
+
+def main():
+    """
+    Main function.
+    """
+    print_circuit_to_file(
+        circuit=single_qubit_with_unitary_operation_applied_d_times(
+            circuit_depth=0
+        ),
+        file_name="theta_and_phi_circuit.png",
+    )
 
 
 if __name__ == "__main__":
