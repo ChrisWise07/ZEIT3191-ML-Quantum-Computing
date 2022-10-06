@@ -43,6 +43,7 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
     workbook_name: str,
     plot_name: str,
     graph_details: Dict[str, str],
+    z_limit: float = 1.0,
 ) -> None:
     """
     Draw graphs for various qubit initialisations
@@ -67,7 +68,7 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
 
     ax.set_ylim([0, 2 * np.pi])
     ax.set_xlim([0, np.pi])
-    ax.set_zlim([0, 1.0])
+    ax.set_zlim([0, z_limit])
 
     ax.scatter(
         np.repeat(theta_values, len(theta_values)),
@@ -85,35 +86,38 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
         labelsize=title_size - 2,
     )
 
-    labelpad = 1
-    ax.set_xticks(np.linspace(0, np.pi, 10))
+    labelpad = 0.0
+    ax.set_xticks(np.linspace(0, np.pi, 5))
     ax.set_xlabel(
         graph_details["x_axis_label"],
         fontsize=title_size - 1,
         labelpad=labelpad,
     )
-    ax.set_yticks(np.linspace(0, 2 * np.pi, 10))
+    ax.set_yticks(np.linspace(0, 2 * np.pi, 5))
+
     ax.set_ylabel(
         graph_details["y_axis_label"],
         fontsize=title_size - 1,
         labelpad=labelpad,
     )
+    ax.zaxis.set_rotate_label(False)
     ax.set_zlabel(
         graph_details["z_axis_label"],
         fontsize=title_size - 1,
         labelpad=labelpad,
+        rotation=89.00,
     )
+
     box = ax.get_position()
     ax.set_position(
         [
-            box.x0 - box.width * 0.05,
-            box.y0 + box.height * 0.1,
+            box.x0 - box.width * 0.1,
+            box.y0 + box.height * 0.0,
             box.width * 1.0,
             box.height * 1.0,
         ]
     )
-
-    fig.savefig(plot_name, bbox_inches="tight")
+    fig.savefig(plot_name, bbox_inches="tight", pad_inches=0.2)
 
 
 def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
@@ -123,6 +127,7 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
     workbook_name: str,
     plot_name: str,
     graph_details: Dict[str, str],
+    y_limit: float = 1.0,
 ) -> None:
     """
     Draw graphs for various qubit initialisations
@@ -143,7 +148,7 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
         for theta_index in range(len(theta_values))
     ]
 
-    ax.set_ylim([0, 1.0])
+    ax.set_ylim([0, y_limit])
     ax.set_xlim([0, np.pi])
 
     ax.scatter(
@@ -156,7 +161,7 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
         labelsize=title_size - 2,
     )
 
-    labelpad = 2.5
+    labelpad = 3
 
     ax.set_xticks(np.linspace(0, np.pi, 10))
     ax.set_xlabel(
@@ -183,33 +188,33 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
     fig.savefig(plot_name)
 
 
-# def plot_line_graph_results(
-#     x_axis_values: List[float],
-#     y_axis_values: List[float],
-#     x_axis_label: str,
-#     y_axis_label: str,
-#     title: str,
-# ):
-#     """
-#     Plots the given x and y axis values.
+def plot_line_graph_results(
+    x_axis_values: List[float],
+    y_axis_values: List[float],
+    x_axis_label: str,
+    y_axis_label: str,
+    title: str,
+):
+    """
+    Plots the given x and y axis values.
 
-#     Args:
-#         x_axis_values: The x axis values to plot.
-#         y_axis_values: The y axis values to plot.
-#         x_axis_label: The label for the x axis.
-#         y_axis_label: The label for the y axis.
-#     """
-#     plt.plot(
-#         x_axis_values,
-#         y_axis_values,
-#         color="red",
-#         marker="o",
-#     )
-#     plt.title(title, fontsize=14)
-#     plt.xlabel(x_axis_label, fontsize=14)
-#     plt.ylabel(y_axis_label, fontsize=14)
-#     plt.grid(True)
-#     return plt
+    Args:
+        x_axis_values: The x axis values to plot.
+        y_axis_values: The y axis values to plot.
+        x_axis_label: The label for the x axis.
+        y_axis_label: The label for the y axis.
+    """
+    plt.plot(
+        x_axis_values,
+        y_axis_values,
+        color="red",
+        marker="o",
+    )
+    plt.title(title, fontsize=14)
+    plt.xlabel(x_axis_label, fontsize=14)
+    plt.ylabel(y_axis_label, fontsize=14)
+    plt.grid(True)
+    return plt
 
 
 def line_plot_for_init_data():
