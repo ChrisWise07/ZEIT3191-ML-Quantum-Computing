@@ -60,8 +60,8 @@ def return_large_scale_prob_distro(
 
 
 EXPERIMENT_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro(
-    theta_range=[3, 3 + NUM_OF_THETA_VALUES],
-    phi_range=[5, 6],
+    theta_range=[2, 2 + NUM_OF_THETA_VALUES],
+    phi_range=[3, 4],
     workbook_name="results/probability_data_only_theta.xlsx",
 )
 
@@ -389,7 +389,7 @@ def compare_bayes_pso_optimisation_for_various_equations() -> None:
     )
     pso_4_dimension_bounds = (
         np.array([-np.pi / 2, 0, 0, 0]),
-        np.array([pi / 2, 1, 1, 1]),
+        np.array([np.pi / 2, 1, 1, 1]),
     )
 
     print("\n\nPSO optimisation of static probability equation")
@@ -733,12 +733,7 @@ def main():
     """
     Main function.
     """
-    print_circuit_to_file(
-        circuit=single_qubit_with_unitary_operation_applied_d_times(
-            circuit_depth=0
-        ),
-        file_name="theta_and_phi_circuit.png",
-    )
+    compare_bayes_pso_optimisation_for_various_equations()
 
 
 if __name__ == "__main__":

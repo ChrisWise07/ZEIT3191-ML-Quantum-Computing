@@ -1,5 +1,38 @@
+from traceback import print_tb
 from numba import njit
 import numpy as np
+
+
+@njit(cache=True)
+def static_probability_equation_for_measuring_zero_no_complex(
+    theta: float,
+    epsilon: float,
+    mu: float,
+    x: float,
+    y: float,
+    z: float,
+    l: float,
+) -> float:
+    """ """
+    return (1 / 2) * (
+        1
+        + (1 - 2 * x - 2 * y) * np.cos(epsilon + theta) * np.cos(mu)
+        + (1 - 2 * y - 2 * z) * np.sin(epsilon + theta) * np.sin(mu)
+    )
+
+
+@njit(cache=True)
+def static_kraus_probability_bounding_equation(
+    theta: float,
+    epsilon: float,
+    mu: float,
+    x: float,
+    y: float,
+    z: float,
+    l: float,
+) -> float:
+    """ """
+    return x + y + z + l - 1
 
 
 @njit(cache=True)
@@ -70,38 +103,6 @@ def trig_kraus_probability_bounding_equation(
 
 
 @njit(cache=True)
-def static_probability_equation_for_measuring_zero_no_complex(
-    theta: float,
-    epsilon: float,
-    mu: float,
-    x: float,
-    y: float,
-    z: float,
-    l: float,
-) -> float:
-    """ """
-    return (1 / 2) * (
-        1
-        + (1 - 2 * x - 2 * y) * np.cos(epsilon + theta) * np.cos(mu)
-        + (1 - 2 * y - 2 * z) * np.sin(epsilon + theta) * np.sin(mu)
-    )
-
-
-@njit(cache=True)
-def static_kraus_probability_bounding_equation(
-    theta: float,
-    epsilon: float,
-    mu: float,
-    x: float,
-    y: float,
-    z: float,
-    l: float,
-) -> float:
-    """ """
-    return x + y + z + l - 1
-
-
-@njit(cache=True)
 def partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
     theta: float,
     epsilon: float,
@@ -114,24 +115,22 @@ def partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
     """
     return (
         (1 / 2)
-        + 0.4878
+        + 0.4828
+        * np.cos(theta + epsilon * (np.sin(theta / 2) ** 2))
         * (
             1
             - x
             - y
-            + (x + y)
-            * (np.cos(1 / 2 * (epsilon + 2 * theta - epsilon * np.cos(theta))))
+            + (x + y) * (np.cos(theta + epsilon * (np.sin(theta / 2) ** 2)))
         )
-        * np.cos(theta + epsilon * (np.sin(theta / 2) ** 2))
-        + 0.109778
+        + 0.130016
+        * np.sin(theta + epsilon * (np.sin(theta / 2) ** 2))
         * (
             1
             - y
             - z
-            + (y + z)
-            * (np.cos(1 / 2 * (epsilon + 2 * theta - epsilon * np.cos(theta))))
+            + (y + z) * (np.cos(theta + epsilon * (np.sin(theta / 2) ** 2)))
         )
-        * np.sin(theta + epsilon * (np.sin(theta / 2) ** 2))
     )
 
 
@@ -165,21 +164,23 @@ def state_depedent_small_theta_no_complex_prob_equation(
     z: float,
 ) -> float:
     return (
-        0.5
-        + np.cos(theta + epsilon * np.sin(0.5 * theta))
+        (1 / 2)
+        + 0.4828
+        * np.cos(theta + epsilon * np.sin(theta / 2))
         * (
-            0.48785
-            - 0.9757
+            1
+            - 2
             * (x + y)
-            * np.sin(0.5 * (theta + epsilon * np.sin(0.5 * theta)))
+            * np.sin(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
         )
-        + (
-            0.109555
-            - 0.219111
+        + 0.130016
+        * np.sin(theta + epsilon * np.sin(theta / 2))
+        * (
+            1
+            - 2
             * (y + z)
-            * np.sin(0.5 * (theta + epsilon * np.sin(0.5 * theta)))
+            * np.sin(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
         )
-        * np.sin(theta + epsilon * np.sin(0.5 * theta))
     )
 
 
