@@ -1,3 +1,4 @@
+from math import sin
 import numpy as np
 import openpyxl
 
@@ -12,6 +13,7 @@ from graphing_funs import (
 from utils.ibmq_utils import (
     return_live_and_fake_backend_with_shortest_queue,
     return_specific_backend,
+    return_specific_fake_backend,
 )
 from quantum_circuits_creator import (
     single_qubit_with_unitary_operation_applied_d_times,
@@ -67,8 +69,8 @@ EXPERIMENT_PROBABILITY_DISTRIBUTION = return_large_scale_prob_distro(
 
 
 def execute_and_return_counts_of_values(
-    circuit: QuantumCircuit,
-) -> Dict[str, int]:
+    circuit: Union[QuantumCircuit, List[QuantumCircuit]],
+) -> Union[Dict[str, int], List[Dict[str, int]]]:
     """
     Executes the given circuit and returns the counts of the values
 
@@ -80,10 +82,7 @@ def execute_and_return_counts_of_values(
     """
 
     return (
-        SIMULATOR[0]
-        .run(circuit, shots=TOTAL_NUM_SHOTS)
-        .result()
-        .get_counts(circuit)
+        SIMULATOR[0].run(circuit, shots=TOTAL_NUM_SHOTS).result().get_counts()
     )
 
 
@@ -280,6 +279,59 @@ def pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation(
                 ),
             )
             for particle_params in list_of_particle_params
+        ]
+    )
+
+
+def pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error(
+    list_of_particle_params: np.ndarray,
+    ideal_data: np.ndarray,
+    theta_values: np.ndarray,
+) -> np.ndarray:
+    """
+    Wrapper function using the PSO algorithm to find the minimum mse
+    between measured probability distribution and calculated
+    probabilities from static probability equation.
+
+    Args:
+        particle_params: The parameters for the particle.
+
+    Returns:
+        The mse between the measured probability distribution and the
+        calculated probability distribution.
+    """
+    return np.array(
+        [
+            calculate_mse_between_two_distributions(
+                dist_1=ideal_data,
+                dist_2=np.array(
+                    [
+                        count.get("0", 0) / TOTAL_NUM_SHOTS
+                        for count in execute_and_return_counts_of_values(
+                            [
+                                single_qubit_with_unitary_operation_applied_d_times(
+                                    circuit_depth=1,
+                                    measurmment_depth=1,
+                                    preparation_depth=1,
+                                    initlisation_array=return_init_np_array_for_single_qubit(
+                                        theta=float(
+                                            theta
+                                            + epsilon
+                                            * (np.sin(theta / 2) ** 2)
+                                        ),
+                                        phi=0,
+                                    ),
+                                    theta=float(
+                                        mu + epsilon * (np.sin(theta / 2) ** 2)
+                                    ),
+                                )
+                                for theta in theta_values
+                            ]
+                        )
+                    ]
+                ),
+            )
+            for epsilon, mu in list_of_particle_params
         ]
     )
 
@@ -540,22 +592,21 @@ def generate_init_array(
     ]
 
 
-def produce_init_maps() -> None:
+def produce_init_maps(workbook_name: str, json_file_prefix: str) -> None:
     import json
     import random
 
     pso_num_particles = 25
     pso_num_iterations = 1000
     pso_4_dimension_bounds = (
-        np.array([-pi / 2, 0, 0, 0]),
-        np.array([pi / 2, 1, 1, 1]),
+        np.array([-np.pi / 2, 0, 0, 0]),
+        np.array([np.pi / 2, 1, 1, 1]),
     )
-
     num_data_points = 10
     num_repeat = 5
 
     epsilon_init_arrays = generate_init_array(
-        np.linspace(-pi / 2, pi / 2, num_data_points),
+        np.linspace(-np.pi / 2, np.pi / 2, num_data_points),
         pso_num_particles,
         list_generating_func=lambda init_value: [
             init_value,
@@ -569,7 +620,7 @@ def produce_init_maps() -> None:
         np.linspace(0, 1, num_data_points),
         pso_num_particles,
         list_generating_func=lambda init_value: [
-            random.uniform(-pi / 2, pi / 2),
+            random.uniform(-np.pi / 2, np.pi / 2),
             init_value,
             random.uniform(0, 1),
             random.uniform(0, 1),
@@ -580,7 +631,7 @@ def produce_init_maps() -> None:
         np.linspace(0, 1, num_data_points),
         pso_num_particles,
         list_generating_func=lambda init_value: [
-            random.uniform(-pi / 2, pi / 2),
+            random.uniform(-np.pi / 2, np.pi / 2),
             random.uniform(0, 1),
             init_value,
             random.uniform(0, 1),
@@ -591,7 +642,7 @@ def produce_init_maps() -> None:
         np.linspace(0, 1, num_data_points),
         pso_num_particles,
         list_generating_func=lambda init_value: [
-            random.uniform(-pi / 2, np.pi / 2),
+            random.uniform(-np.pi / 2, np.pi / 2),
             random.uniform(0, 1),
             random.uniform(0, 1),
             init_value,
@@ -620,6 +671,11 @@ def produce_init_maps() -> None:
                         "kraus_prob_bounding_equation_func": (
                             partial_solved_trig_probability_equation_for_measuring_zero_no_complex
                         ),
+                        "experimental_data": return_large_scale_prob_distro(
+                            theta_range=[2, 2 + NUM_OF_THETA_VALUES],
+                            phi_range=[3, 4],
+                            workbook_name=workbook_name,
+                        ),
                     },
                     num_particles=pso_num_particles,
                     iterations=pso_num_iterations,
@@ -635,7 +691,7 @@ def produce_init_maps() -> None:
             )
 
         file_handler(
-            path=f"{name}_init_map.json",
+            path=f"{json_file_prefix}_{name}_init_map.json",
             mode="w",
             func=lambda f: json.dump(init_map, f),
         )
@@ -662,6 +718,19 @@ def execute_data_gathering_experiment() -> None:
         starting_column=3,
         theta_column_num=1,
         workbook_name="results/probability_data_only_theta.xlsx",
+    )
+
+
+def execute_data_gathering_experiment_simulators() -> None:
+    SIMULATOR.append(return_specific_fake_backend("fake_quito"))
+
+    find_probability_data_for_various_qubit_initialisations(
+        num_theta_values=100,
+        num_phi_values=1,
+        starting_row=2,
+        starting_column=3,
+        theta_column_num=1,
+        workbook_name="results/simulator_probability_data.xlsx",
     )
 
 
@@ -729,11 +798,87 @@ def graphing_probability_data() -> None:
     )
 
 
+def use_pso_to_minimum_error_for_various_qubit_initialisations() -> None:
+    # fake_backend = return_specific_fake_backend("fake_quito")
+    # print(f"Using {fake_backend}")
+    SIMULATOR.append(AerSimulator())
+
+    pso_num_particles = 5
+    pso_num_iterations = 25
+    theta_values = np.linspace(0, np.pi, 100)
+    ideal_data = np.array([np.cos(theta / 2) ** 2 for theta in theta_values])
+
+    general_pso_optimisation_handler(
+        num_dimensions=2,
+        bounds=(
+            np.array([-np.pi / 2, -np.pi / 2]),
+            np.array([np.pi / 2, np.pi / 2]),
+        ),
+        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error,
+        objective_func_kwargs={
+            "ideal_data": ideal_data,
+            "theta_values": theta_values,
+        },
+        num_particles=pso_num_particles,
+        iterations=pso_num_iterations,
+    )
+
+
+def find_average_from_several_init_json(
+    list_of_init_json_file_names: List[str],
+) -> None:
+    import json
+
+    epsilon_values, x_values, y_values, z_values = (
+        [],
+        [],
+        [],
+        [],
+    )
+
+    for init_json_file_name in list_of_init_json_file_names:
+        with open(init_json_file_name) as f:
+            init_data = json.load(f)
+        for init_value in init_data:
+            epsilon_values.append(init_data[init_value][1][0])
+            x_values.append(init_data[init_value][1][1])
+            y_values.append(init_data[init_value][1][2])
+            z_values.append(init_data[init_value][1][3])
+
+    print(
+        f"Average epsilon: {np.mean(epsilon_values)}, Average x: {np.mean(x_values)}, Average y: {np.mean(y_values)}, Average z: {np.mean(z_values)}"
+    )
+
+
 def main():
     """
     Main function.
     """
-    compare_bayes_pso_optimisation_for_various_equations()
+    # use_pso_to_minimum_error_for_various_qubit_initialisations()
+
+    # find_average_from_several_init_json(
+    #     [
+    #         "results/epsilon_init_map.json",
+    #         "results/x_init_map.json",
+    #         "results/y_init_map.json",
+    #         "results/z_init_map.json",
+    #     ]
+    # )
+
+    # execute_data_gathering_experiment_simulators()
+    # produce_init_maps(
+    #     workbook_name="results/simulator_probability_data.xlsx",
+    #     json_file_prefix="fake_quito",
+    # )
+
+    find_average_from_several_init_json(
+        [
+            "fake_quito_epsilon_init_map.json",
+            "fake_quito_x_init_map.json",
+            "fake_quito_y_init_map.json",
+            "fake_quito_z_init_map.json",
+        ]
+    )
 
 
 if __name__ == "__main__":

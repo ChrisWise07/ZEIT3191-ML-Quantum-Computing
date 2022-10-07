@@ -137,6 +137,7 @@ def single_qubit_with_unitary_operation_applied_d_times(
             0,
         ]
     ),
+    theta: float = 0,
 ) -> QuantumCircuit:
     """
     Returns a single qubit circuit with a parameterised unitary gate
@@ -156,7 +157,7 @@ def single_qubit_with_unitary_operation_applied_d_times(
 
     """
 
-    theta, phi, lam = Parameter("theta"), Parameter("phi"), Parameter("lam")
+    # theta, phi, lam = Parameter("theta"), Parameter("phi"), Parameter("lam")
 
     circuit = return_initial_quantum_circuit(
         num_qubits=preparation_depth,
@@ -172,7 +173,7 @@ def single_qubit_with_unitary_operation_applied_d_times(
     ]
 
     for _ in range(circuit_depth):
-        circuit.u(theta, phi, lam, 0)
+        circuit.u(theta, 0, 0, 0)
 
     for prepartition_index in range(preparation_depth):
         circuit.measure

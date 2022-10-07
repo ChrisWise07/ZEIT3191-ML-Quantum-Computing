@@ -34,6 +34,21 @@ def return_specific_backend(
     return __return_ibmq_provider().get_backend(backend_name)
 
 
+def return_specific_fake_backend(
+    backend_name: str,
+) -> AerSimulator:
+    """
+    Returns specific fake backend.
+
+    Args:
+        backend_name: Name of the backend.
+
+    Returns:
+        Backend.
+    """
+    return AerSimulator.from_backend(FakeProvider().get_backend(backend_name))
+
+
 def find_ibmq_provider_with_enough_qubits_and_shortest_queue(
     num_required_qubits: int = 5,
 ) -> IBMQBackend:
