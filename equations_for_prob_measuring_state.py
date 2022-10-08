@@ -135,6 +135,39 @@ def partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
 
 
 @njit(cache=True)
+def sim_partial_solved_trig_probability_equation_for_measuring_zero_no_complex(
+    theta: float,
+    epsilon: float,
+    x: float,
+    y: float,
+    z: float,
+) -> float:
+    """
+    Probability of measuring zero given excited state.
+    """
+
+    return (
+        (1 / 2)
+        + 0.47685
+        * np.cos(theta + epsilon * (np.sin(theta / 2) ** 2))
+        * (
+            1
+            - x
+            - y
+            + (x + y) * (np.cos(theta + epsilon * (np.sin(theta / 2) ** 2)))
+        )
+        + 0.15038
+        * np.sin(theta + epsilon * (np.sin(theta / 2) ** 2))
+        * (
+            1
+            - y
+            - z
+            + (y + z) * (np.cos(theta + epsilon * (np.sin(theta / 2) ** 2)))
+        )
+    )
+
+
+@njit(cache=True)
 def partial_solved_trig_equation_for_kraus_probabilities_no_complex(
     theta: float,
     epsilon: float,

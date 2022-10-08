@@ -176,7 +176,6 @@ def single_qubit_with_unitary_operation_applied_d_times(
         circuit.u(theta, 0, 0, 0)
 
     for prepartition_index in range(preparation_depth):
-        circuit.measure
         circuit.measure(
             prepartition_index,
             range(
