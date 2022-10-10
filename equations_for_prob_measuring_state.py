@@ -230,3 +230,51 @@ def state_dependent_small_theta_no_complex_kraus_bounding_equation(
         + (x + y + z) * np.sin(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
         - 1
     )
+
+
+@njit(cache=True)
+def state_depedent_small_theta_no_complex_prob_equation_with_nu(
+    theta: float,
+    epsilon: float,
+    nu: float,
+    x: float,
+    y: float,
+    z: float,
+    l: float,
+) -> float:
+    return (
+        (1 / 2)
+        + np.cos(nu)
+        * np.cos(theta + epsilon * np.sin(theta / 2))
+        * (
+            1
+            - 2
+            * (x + y)
+            * np.sin(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
+        )
+        + np.sin(nu)
+        * np.sin(theta + epsilon * np.sin(theta / 2))
+        * (
+            1
+            - 2
+            * (y + z)
+            * np.sin(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
+        )
+    )
+
+
+@njit(cache=True)
+def state_dependent_small_theta_no_complex_kraus_bounding_equation_with_l(
+    theta: float,
+    epsilon: float,
+    nu: float,
+    x: float,
+    y: float,
+    z: float,
+    l: float,
+) -> float:
+    return (
+        l * np.cos(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
+        + (x + y + z) * np.sin(1 / 2 * (theta + epsilon * np.sin(theta / 2)))
+        - 1
+    )

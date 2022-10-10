@@ -233,7 +233,9 @@ def line_plot_for_init_data():
         ax.set_ylim([-1.0, 1.0])
         ax.set_xlim(x_axis_lim)
 
-        init_data = json.load(open(f"results/{parameter_name}_init_map.json"))
+        init_data = json.load(
+            open(f"fake_quito_{parameter_name}_init_map.json")
+        )
         x = []
         colour_map = {}
 

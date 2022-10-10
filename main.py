@@ -34,6 +34,8 @@ from equations_for_prob_measuring_state import (
     sim_partial_solved_trig_probability_equation_for_measuring_zero_no_complex,
     state_dependent_small_theta_no_complex_kraus_bounding_equation,
     state_depedent_small_theta_no_complex_prob_equation,
+    state_depedent_small_theta_no_complex_prob_equation_with_nu,
+    state_dependent_small_theta_no_complex_kraus_bounding_equation_with_l,
 )
 
 SIMULATOR = []  # type: List[AerSimulator]
@@ -438,7 +440,7 @@ def draw_and_save_circuit_diagram(circuit: QuantumCircuit, path: str) -> None:
 
 def compare_bayes_pso_optimisation_for_various_equations() -> None:
     pso_num_particles = 50
-    pso_num_iterations = 1500
+    pso_num_iterations = 5000
     pso_6_dimension_bounds = (
         np.array([-np.pi / 2, -np.pi / 2, 0, 0, 0, 0]),
         np.array([np.pi / 2, np.pi / 2, 1, 1, 1, 1]),
@@ -448,42 +450,52 @@ def compare_bayes_pso_optimisation_for_various_equations() -> None:
         np.array([np.pi / 2, 1, 1, 1]),
     )
 
-    # print("\n\nPSO optimisation of static probability equation")
-    # general_pso_optimisation_handler(
-    #     num_dimensions=6,
-    #     bounds=pso_6_dimension_bounds,
-    #     objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
-    #     objective_func_kwargs={
-    #         "prob_measuring_zero_equation_func": (
-    #             static_probability_equation_for_measuring_zero_no_complex
-    #         ),
-    #         "kraus_prob_bounding_equation_func": (
-    #             static_kraus_probability_bounding_equation
-    #         ),
-    #     },
-    #     num_particles=pso_num_particles,
-    #     iterations=pso_num_iterations,
-    # )
+    print("\n\nPSO optimisation of static probability equation")
+    general_pso_optimisation_handler(
+        num_dimensions=6,
+        bounds=pso_6_dimension_bounds,
+        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+        objective_func_kwargs={
+            "prob_measuring_zero_equation_func": (
+                static_probability_equation_for_measuring_zero_no_complex
+            ),
+            "kraus_prob_bounding_equation_func": (
+                static_kraus_probability_bounding_equation
+            ),
+            "experimental_data": return_large_scale_prob_distro(
+                theta_range=[2, 2 + NUM_OF_THETA_VALUES],
+                phi_range=[3, 4],
+                workbook_name="results/probability_data_only_theta.xlsx",
+            ),
+        },
+        num_particles=pso_num_particles,
+        iterations=pso_num_iterations,
+    )
 
-    # print("\n\nPSO optimisation of trig probability equation")
-    # general_pso_optimisation_handler(
-    #     num_dimensions=6,
-    #     bounds=pso_6_dimension_bounds,
-    #     objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
-    #     objective_func_kwargs={
-    #         "prob_measuring_zero_equation_func": (
-    #             trig_probability_equation_for_measuring_zero_no_complex
-    #         ),
-    #         "kraus_prob_bounding_equation_func": (
-    #             trig_kraus_probability_bounding_equation
-    #         ),
-    #     },
-    #     num_particles=pso_num_particles,
-    #     iterations=pso_num_iterations,
-    # )
+    print("\n\nPSO optimisation of trig probability equation")
+    general_pso_optimisation_handler(
+        num_dimensions=6,
+        bounds=pso_6_dimension_bounds,
+        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+        objective_func_kwargs={
+            "prob_measuring_zero_equation_func": (
+                trig_probability_equation_for_measuring_zero_no_complex
+            ),
+            "kraus_prob_bounding_equation_func": (
+                trig_kraus_probability_bounding_equation
+            ),
+            "experimental_data": return_large_scale_prob_distro(
+                theta_range=[2, 2 + NUM_OF_THETA_VALUES],
+                phi_range=[3, 4],
+                workbook_name="results/probability_data_only_theta.xlsx",
+            ),
+        },
+        num_particles=pso_num_particles,
+        iterations=pso_num_iterations,
+    )
 
     print(
-        "\n\nPSO optimisation of trig probability equation with 4 dimensions"
+        "\n\nPSO optimisation of partial solved trig probability equation with 4 dimensions"
     )
     general_pso_optimisation_handler(
         num_dimensions=4,
@@ -491,7 +503,7 @@ def compare_bayes_pso_optimisation_for_various_equations() -> None:
         objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
         objective_func_kwargs={
             "prob_measuring_zero_equation_func": (
-                sim_partial_solved_trig_probability_equation_for_measuring_zero_no_complex
+                partial_solved_trig_probability_equation_for_measuring_zero_no_complex
             ),
             "kraus_prob_bounding_equation_func": (
                 partial_solved_trig_equation_for_kraus_probabilities_no_complex
@@ -499,7 +511,55 @@ def compare_bayes_pso_optimisation_for_various_equations() -> None:
             "experimental_data": return_large_scale_prob_distro(
                 theta_range=[2, 2 + NUM_OF_THETA_VALUES],
                 phi_range=[3, 4],
-                workbook_name="results/simulator_probability_data.xlsx",
+                workbook_name="results/probability_data_only_theta.xlsx",
+            ),
+        },
+        num_particles=pso_num_particles,
+        iterations=pso_num_iterations,
+    )
+
+    print(
+        "\n\nPSO optimisation of small trig probability equation with 6 dimensions"
+    )
+    general_pso_optimisation_handler(
+        num_dimensions=6,
+        bounds=pso_6_dimension_bounds,
+        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+        objective_func_kwargs={
+            "prob_measuring_zero_equation_func": (
+                state_depedent_small_theta_no_complex_prob_equation_with_nu
+            ),
+            "kraus_prob_bounding_equation_func": (
+                state_dependent_small_theta_no_complex_kraus_bounding_equation_with_l
+            ),
+            "experimental_data": return_large_scale_prob_distro(
+                theta_range=[2, 2 + NUM_OF_THETA_VALUES],
+                phi_range=[3, 4],
+                workbook_name="results/probability_data_only_theta.xlsx",
+            ),
+        },
+        num_particles=pso_num_particles,
+        iterations=pso_num_iterations,
+    )
+
+    print(
+        "\n\nPSO optimisation of small trig probability equation with 4 dimensions"
+    )
+    general_pso_optimisation_handler(
+        num_dimensions=4,
+        bounds=pso_4_dimension_bounds,
+        objective_func=pso_wrapper_for_mse_prob_distro_difference_for_parameter_estimation,
+        objective_func_kwargs={
+            "prob_measuring_zero_equation_func": (
+                state_depedent_small_theta_no_complex_prob_equation
+            ),
+            "kraus_prob_bounding_equation_func": (
+                state_dependent_small_theta_no_complex_kraus_bounding_equation
+            ),
+            "experimental_data": return_large_scale_prob_distro(
+                theta_range=[2, 2 + NUM_OF_THETA_VALUES],
+                phi_range=[3, 4],
+                workbook_name="results/probability_data_only_theta.xlsx",
             ),
         },
         num_particles=pso_num_particles,
@@ -587,7 +647,7 @@ def produce_init_maps(workbook_name: str, json_file_prefix: str) -> None:
     import random
 
     pso_num_particles = 25
-    pso_num_iterations = 2000
+    pso_num_iterations = 2500
     pso_4_dimension_bounds = (
         np.array([-np.pi / 2, 0, 0, 0]),
         np.array([np.pi / 2, 1, 1, 1]),
@@ -791,7 +851,7 @@ def use_pso_to_minimum_error_for_various_qubit_initialisations() -> None:
     SIMULATOR.append(return_specific_fake_backend("fake_quito"))
 
     pso_num_particles = 5
-    pso_num_iterations = 50
+    pso_num_iterations = 500
     theta_values = np.linspace(0, np.pi, 100)
     ideal_data = np.array([np.cos(theta / 2) ** 2 for theta in theta_values])
 
@@ -844,30 +904,35 @@ def main():
     # execute_data_gathering_experiment_simulators()
     # compare_bayes_pso_optimisation_for_various_equations()
     # produce_init_maps(
+    #     workbook_name="results/probability_data_only_theta.xlsx",
+    #     json_file_prefix="ibmq_quito",
+    # )
+
+    # produce_init_maps(
     #     workbook_name="results/simulator_probability_data.xlsx",
     #     json_file_prefix="fake_quito",
     # )
 
-    # find_average_from_several_init_json(
-    #     [
-    #         "results/imbq_quito_epsilon_init_map.json",
-    #         "results/imbq_quito_x_init_map.json",
-    #         "results/imbq_quito_y_init_map.json",
-    #         "results/imbq_quito_z_init_map.json",
-    #     ]
-    # )
+    find_average_from_several_init_json(
+        [
+            "ibmq_quito_epsilon_init_map.json",
+            "ibmq_quito_x_init_map.json",
+            "ibmq_quito_y_init_map.json",
+            "ibmq_quito_z_init_map.json",
+        ]
+    )
 
-    # find_average_from_several_init_json(
-    #     [
-    #         "results/fake_quito_epsilon_init_map.json",
-    #         "results/fake_quito_x_init_map.json",
-    #         "results/fake_quito_y_init_map.json",
-    #         "results/fake_quito_z_init_map.json",
-    #     ]
-    # )
+    find_average_from_several_init_json(
+        [
+            "fake_quito_epsilon_init_map.json",
+            "fake_quito_x_init_map.json",
+            "fake_quito_y_init_map.json",
+            "fake_quito_z_init_map.json",
+        ]
+    )
 
-    use_pso_to_minimum_error_for_various_qubit_initialisations()
-    # line_plot_for_init_data()
+    # use_pso_to_minimum_error_for_various_qubit_initialisations()
+    line_plot_for_init_data()
 
 
 if __name__ == "__main__":
