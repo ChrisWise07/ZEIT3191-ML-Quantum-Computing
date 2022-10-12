@@ -876,7 +876,8 @@ def find_average_from_several_init_json(
 ) -> None:
     import json
 
-    epsilon_values, x_values, y_values, z_values = (
+    mse_values, epsilon_values, x_values, y_values, z_values = (
+        [],
         [],
         [],
         [],
@@ -887,13 +888,14 @@ def find_average_from_several_init_json(
         with open(init_json_file_name) as f:
             init_data = json.load(f)
         for init_value in init_data:
+            mse_values.append(init_data[init_value][0])
             epsilon_values.append(init_data[init_value][1][0])
             x_values.append(init_data[init_value][1][1])
             y_values.append(init_data[init_value][1][2])
             z_values.append(init_data[init_value][1][3])
 
     print(
-        f"Average epsilon: {round(np.mean(epsilon_values), 4)}, Average x: {round(np.mean(x_values), 4)}, Average y: {round(np.mean(y_values), 4)}, Average z: {round(np.mean(z_values), 4)}"
+        f"Average MSE: {np.mean(mse_values)}, Average Epsilon: {np.mean(epsilon_values)}, Average X: {np.mean(x_values)}, Average Y: {np.mean(y_values)}, Average Z: {np.mean(z_values)}"
     )
 
 
@@ -913,26 +915,38 @@ def main():
     #     json_file_prefix="fake_quito",
     # )
 
-    find_average_from_several_init_json(
-        [
-            "ibmq_quito_epsilon_init_map.json",
-            "ibmq_quito_x_init_map.json",
-            "ibmq_quito_y_init_map.json",
-            "ibmq_quito_z_init_map.json",
-        ]
-    )
+    # find_average_from_several_init_json(
+    #     [
+    #         "results/ibmq_quito_epsilon_init_map.json",
+    #         "results/ibmq_quito_x_init_map.json",
+    #         "results/ibmq_quito_y_init_map.json",
+    #         "results/ibmq_quito_z_init_map.json",
+    #     ]
+    # )
 
-    find_average_from_several_init_json(
-        [
-            "fake_quito_epsilon_init_map.json",
-            "fake_quito_x_init_map.json",
-            "fake_quito_y_init_map.json",
-            "fake_quito_z_init_map.json",
-        ]
-    )
+    # find_average_from_several_init_json(
+    #     [
+    #         "results/fake_quito_epsilon_init_map.json",
+    #         "results/fake_quito_x_init_map.json",
+    #         "results/fake_quito_y_init_map.json",
+    #         "results/fake_quito_z_init_map.json",
+    #     ]
+    # )
 
     # use_pso_to_minimum_error_for_various_qubit_initialisations()
-    line_plot_for_init_data()
+    # line_plot_for_init_data()
+
+    theta_values = np.linspace(0, np.pi, 100)
+    ideal_data = np.array([np.cos(theta / 2) ** 2 for theta in theta_values])
+
+    SIMULATOR.append(return_specific_fake_backend("fake_quito"))
+    print(
+        pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error(
+            list_of_particle_params=[[0.7418, -0.3055], [0.2721, -0.0749]],
+            theta_values=theta_values,
+            ideal_data=ideal_data,
+        )
+    )
 
 
 if __name__ == "__main__":
