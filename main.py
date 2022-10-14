@@ -899,6 +899,51 @@ def find_average_from_several_init_json(
     )
 
 
+def compare_correction_methods() -> None:
+    theta_values = np.linspace(0, np.pi, 100)
+    ideal_data = np.array([np.cos(theta / 2) ** 2 for theta in theta_values])
+    control_mse_values = []
+    inferred_mse_values = []
+    minimised_mse_values = []
+    SIMULATOR.append(return_specific_fake_backend("fake_quito"))
+
+    for i in range(10):
+        (
+            control,
+            inferred,
+            minised,
+        ) = pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error(
+            list_of_particle_params=[
+                [0, 0],
+                [0.7418, -0.3055],
+                [0.2721, -0.0749],
+            ],
+            theta_values=theta_values,
+            ideal_data=ideal_data,
+        )
+        control_mse_values.append(control)
+        inferred_mse_values.append(inferred)
+        minimised_mse_values.append(minised)
+
+    print(
+        f"Control MSE: {np.mean(control_mse_values)}, Inferred MSE: {np.mean(inferred_mse_values)}, Minimised MSE: {np.mean(minimised_mse_values)}"
+    )
+
+
+def compare_distance_from_ideal_to_experimentally_measured() -> None:
+    print(
+        calculate_mse_between_two_distributions(
+            dist_1=EXPERIMENT_PROBABILITY_DISTRIBUTION,
+            dist_2=np.array(
+                [
+                    np.cos(theta / 2) ** 2
+                    for theta in np.linspace(0, np.pi, 100)
+                ]
+            ),
+        )
+    )
+
+
 def main():
     """
     Main function.
@@ -935,18 +980,7 @@ def main():
 
     # use_pso_to_minimum_error_for_various_qubit_initialisations()
     # line_plot_for_init_data()
-
-    theta_values = np.linspace(0, np.pi, 100)
-    ideal_data = np.array([np.cos(theta / 2) ** 2 for theta in theta_values])
-
-    SIMULATOR.append(return_specific_fake_backend("fake_quito"))
-    print(
-        pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error(
-            list_of_particle_params=[[0.7418, -0.3055], [0.2721, -0.0749]],
-            theta_values=theta_values,
-            ideal_data=ideal_data,
-        )
-    )
+    compare_distance_from_ideal_to_experimentally_measured()
 
 
 if __name__ == "__main__":
