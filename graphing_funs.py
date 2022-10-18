@@ -108,16 +108,17 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
         rotation=89.00,
     )
 
-    box = ax.get_position()
-    ax.set_position(
-        [
-            box.x0 - box.width * 0.05,
-            box.y0 + box.height * 0.0,
-            box.width * 1.0,
-            box.height * 1.0,
-        ]
-    )
-    fig.savefig(plot_name, bbox_inches="tight", pad_inches=0.2)
+    # box = ax.get_position()
+    # # ax.set_position(
+    # #     [
+    # #         box.x0 - box.width * 0.05,
+    # #         box.y0 + box.height * 0.0,
+    # #         box.width * 1.0,
+    # #         box.height * 1.0,
+    # #     ]
+    # # )
+    fig.savefig(plot_name)
+    # fig.savefig(plot_name, bbox_inches="tight", pad_inches=0.2)
 
 
 def draw_2d_graphs_for_various_qubit_initialisations_probability_data(

@@ -786,38 +786,38 @@ def execute_data_gathering_experiment_simulators() -> None:
 def graphing_probability_data() -> None:
     theta_string = r"$\theta$"
     phi_string = r"$\phi$"
-    zero_ket_string = r"$\left|0\right\rangle$"
+    zero_ket_string = r"$0$"
 
-    draw_3d_graphs_for_various_qubit_initialisations_probability_data(
-        theta_values=np.linspace(0, np.pi, 10),
-        phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
-        starting_row_in_spreadsheet=18,
-        starting_column_in_spreadsheet=3,
-        workbook_name="results/probability_data_theta_and_phi.xlsx",
-        plot_name="results/probability_over_theta_and_phi.pdf",
-        graph_details={
-            "title": f"Probability of measuring {zero_ket_string} for various {theta_string} and {phi_string} values",
-            "x_axis_label": theta_string,
-            "y_axis_label": phi_string,
-            "z_axis_label": f"Probability of measuring {zero_ket_string}",
-        },
-    )
+    # draw_3d_graphs_for_various_qubit_initialisations_probability_data(
+    #     theta_values=np.linspace(0, np.pi, 10),
+    #     phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
+    #     starting_row_in_spreadsheet=18,
+    #     starting_column_in_spreadsheet=3,
+    #     workbook_name="results/probability_data_theta_and_phi.xlsx",
+    #     plot_name="results/probability_over_theta_and_phi.pdf",
+    #     graph_details={
+    #         "title": f"Probability of measuring {zero_ket_string} for various {theta_string} and {phi_string} values",
+    #         "x_axis_label": theta_string,
+    #         "y_axis_label": phi_string,
+    #         "z_axis_label": f"Probability of measuring {zero_ket_string}",
+    #     },
+    # )
 
-    draw_3d_graphs_for_various_qubit_initialisations_probability_data(
-        theta_values=np.linspace(0, np.pi, 10),
-        phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
-        starting_row_in_spreadsheet=46,
-        starting_column_in_spreadsheet=3,
-        workbook_name="results/probability_data_theta_and_phi.xlsx",
-        plot_name="results/probability_error_data_over_theta_and_phi.pdf",
-        graph_details={
-            "title": f"Mean Sqaured Error for various {theta_string} and {phi_string} values",
-            "x_axis_label": theta_string,
-            "y_axis_label": phi_string,
-            "z_axis_label": f"Mean Sqaured Error",
-        },
-        z_limit=0.003,
-    )
+    # draw_3d_graphs_for_various_qubit_initialisations_probability_data(
+    #     theta_values=np.linspace(0, np.pi, 10),
+    #     phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
+    #     starting_row_in_spreadsheet=46,
+    #     starting_column_in_spreadsheet=3,
+    #     workbook_name="results/probability_data_theta_and_phi.xlsx",
+    #     plot_name="results/probability_error_data_over_theta_and_phi.pdf",
+    #     graph_details={
+    #         "title": f"Sqaured Error for various {theta_string} and {phi_string} values",
+    #         "x_axis_label": theta_string,
+    #         "y_axis_label": phi_string,
+    #         "z_axis_label": f"Sqaured Error",
+    #     },
+    #     z_limit=0.003,
+    # )
 
     draw_2d_graphs_for_various_qubit_initialisations_probability_data(
         theta_values=np.linspace(0, np.pi, 100),
@@ -839,7 +839,7 @@ def graphing_probability_data() -> None:
         workbook_name="results/probability_data_only_theta.xlsx",
         plot_name="results/probability_error_data_only_theta.pdf",
         graph_details={
-            "title": f"Mean Sqaured Error for various {theta_string} values",
+            "title": f"Sqaured Error for various {theta_string} values",
             "x_axis_label": theta_string,
             "y_axis_label": f"Mean Sqaured Error",
         },
@@ -980,7 +980,7 @@ def main():
 
     # use_pso_to_minimum_error_for_various_qubit_initialisations()
     # line_plot_for_init_data()
-    compare_distance_from_ideal_to_experimentally_measured()
+    graphing_probability_data()
 
 
 if __name__ == "__main__":
