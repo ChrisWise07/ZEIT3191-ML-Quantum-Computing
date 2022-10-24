@@ -167,12 +167,15 @@ def generic_bayes_optimiser_function(
         The optimised parameters.
     """
     from bayes_opt import BayesianOptimization
+    from bayes_opt import SequentialDomainReductionTransformer
 
     optimiser = BayesianOptimization(
         f=wrapper_function,
         pbounds=pbounds,
-        random_state=1,
         verbose=1,
+        bounds_transformer=SequentialDomainReductionTransformer(
+            minimum_window=0.1
+        ),
     )
 
     optimiser.maximize(
@@ -243,14 +246,10 @@ def generate_prob_data_over_theta(
         The probability data over theta.
     """
 
-    return np.array(
-        [
-            prob_measuring_zero_equation_func(theta, *args_for_equation_funcs)
-            + kraus_prob_bounding_equation_func(
-                theta, *args_for_equation_funcs
-            )
-            for theta in THETA_VALUES
-        ]
+    return prob_measuring_zero_equation_func(
+        THETA_VALUES, *args_for_equation_funcs
+    ) + kraus_prob_bounding_equation_func(
+        THETA_VALUES, *args_for_equation_funcs
     )
 
 
@@ -553,7 +552,7 @@ def compare_bayes_pso_optimisation_for_various_equations() -> None:
     # )
 
     bayes_init_points = 25
-    bayes_num_iterations = 500
+    bayes_num_iterations = 250
     bayes_6_dimension_bounds = {
         "epsilon": (-np.pi / 2, np.pi / 2),
         "mu": (-np.pi / 2, np.pi / 2),
