@@ -219,23 +219,23 @@ def plot_line_graph_results(
 
 
 def line_plot_for_init_data():
-    for parameter_name, x_axis_lim in [
-        ["epsilon", [-np.pi / 2, np.pi / 2]],
-        ["x", [0, 1.0]],
-        ["y", [0, 1.0]],
-        ["z", [0, 1.0]],
+    for parameter_name, symbol, x_axis_lim in [
+        ["epsilon", r"$\epsilon$", [-np.pi / 2, np.pi / 2]],
+        ["x", r"$\textit{x}$", [0, 1.0]],
+        ["y", r"$\textit{y}$", [0, 1.0]],
+        ["z", r"$\textit{z}$", [0, 1.0]],
     ]:
 
         fig, ax = plt.subplots(figsize=(width, height))
         fig.suptitle(
-            f"PSO Solutions For Various Initial {parameter_name.capitalize()} Values",
+            f"PSO Solutions For Various Initial {symbol} Values",
             fontsize=title_size,
         )
         ax.set_ylim([-1.0, 1.0])
         ax.set_xlim(x_axis_lim)
 
         init_data = json.load(
-            open(f"fake_quito_{parameter_name}_init_map.json")
+            open(f"results/ibmq_quito_{parameter_name}_init_map.json")
         )
         x = []
         colour_map = {}
@@ -286,16 +286,16 @@ def line_plot_for_init_data():
             fontsize=title_size - 1,
         )
 
-        plt.ylabel("Values", fontsize=title_size - 1)
-        plt.xlabel(f"Initial {parameter_name} value", fontsize=title_size - 1)
+        plt.ylabel("Values", fontsize=title_size - 1, labelpad=1)
+        plt.xlabel(f"Initial {symbol} value", fontsize=title_size - 1)
 
         box = ax.get_position()
         ax.set_position(
             [
                 box.x0 - box.width * 0.0,
                 box.y0 + box.height * 0.175,
-                box.width * 1.075,
-                box.height * 0.85,
+                box.width * 1.0,
+                box.height * 0.825,
             ]
         )
 
@@ -316,4 +316,4 @@ def line_plot_for_init_data():
             columnspacing=1.0,
         )
 
-        fig.savefig(f"{parameter_name}_init_graph.pdf")
+        fig.savefig(f"results/ibmq_quito_{parameter_name}_init_graph.pdf")
