@@ -910,8 +910,8 @@ def use_pso_to_minimum_error_for_various_qubit_initialisations() -> None:
     general_pso_optimisation_handler(
         num_dimensions=2,
         bounds=(
-            np.array([-np.pi / 2, -np.pi / 2]),
-            np.array([np.pi / 2, np.pi / 2]),
+            np.array([-2 * np.pi, -2 * np.pi]),
+            np.array([2 * np.pi, 2 * np.pi]),
         ),
         objective_func=pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error,
         objective_func_kwargs={
@@ -1030,9 +1030,9 @@ def main():
     #     ]
     # )
 
-    # use_pso_to_minimum_error_for_various_qubit_initialisations()
+    use_pso_to_minimum_error_for_various_qubit_initialisations()
     # line_plot_for_init_data()
-    line_plot_for_init_data()
+    # line_plot_for_init_data()
 
 
 if __name__ == "__main__":
