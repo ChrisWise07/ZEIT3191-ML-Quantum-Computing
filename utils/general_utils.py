@@ -1,5 +1,6 @@
 from numba import njit
 import numpy as np
+import openpyxl
 
 
 def file_handler(path, mode, func):
@@ -8,6 +9,23 @@ def file_handler(path, mode, func):
             return func(f)
     except FileNotFoundError:
         return 0
+
+
+def open_workbook_sheet(path) -> openpyxl.worksheet.worksheet.Worksheet:
+    """
+    Open workbook and return sheet
+
+    Args:
+        path (str): path to workbook
+
+    Returns:
+        sheet (openpyxl.worksheet.worksheet.Worksheet): sheet
+    """
+    try:
+        workbook = openpyxl.load_workbook(path)
+        return workbook.active
+    except FileNotFoundError:
+        return None
 
 
 @njit(cache=True)

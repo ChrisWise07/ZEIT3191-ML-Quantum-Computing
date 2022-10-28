@@ -1,6 +1,6 @@
-from cProfile import label
 import numpy as np
 import json
+import openpyxl
 
 from typing import Dict, List
 import matplotlib as mpl
@@ -40,7 +40,7 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
     phi_values: np.ndarray,
     starting_row_in_spreadsheet: int,
     starting_column_in_spreadsheet: int,
-    workbook_name: str,
+    workbook_sheet: openpyxl.worksheet.worksheet.Worksheet,
     plot_name: str,
     graph_details: Dict[str, str],
     z_limit: float = 1.0,
@@ -48,10 +48,7 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
     """
     Draw graphs for various qubit initialisations
     """
-    import openpyxl
 
-    workbook = openpyxl.load_workbook(workbook_name)
-    sheet = workbook.active
     fig, ax = plt.subplots(
         figsize=(width, height), subplot_kw={"projection": "3d"}
     )
@@ -108,17 +105,7 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
         rotation=89.00,
     )
 
-    # box = ax.get_position()
-    # # ax.set_position(
-    # #     [
-    # #         box.x0 - box.width * 0.05,
-    # #         box.y0 + box.height * 0.0,
-    # #         box.width * 1.0,
-    # #         box.height * 1.0,
-    # #     ]
-    # # )
     fig.savefig(plot_name)
-    # fig.savefig(plot_name, bbox_inches="tight", pad_inches=0.2)
 
 
 def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
