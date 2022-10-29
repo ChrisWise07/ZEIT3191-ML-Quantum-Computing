@@ -924,7 +924,7 @@ def use_pso_to_minimum_error_for_various_qubit_initialisations() -> None:
     )
 
 
-def find_average_from_several_init_json(
+def print_stats_metrics_init_data(
     list_of_init_json_file_names: List[str],
 ) -> None:
     import json
@@ -948,11 +948,17 @@ def find_average_from_several_init_json(
             z_values.append(init_data[init_value][1][3])
 
     print(
-        f"Pearson's correlation coefficient for x and y: {np.corrcoef(x_values, y_values)}"
-    )
-
-    print(
-        f"Average MSE: {np.mean(mse_values)}, Average Epsilon: {np.mean(epsilon_values)}, Average X: {np.mean(x_values)}, Average Y: {np.mean(y_values)}, Average Z: {np.mean(z_values)}"
+        " Pearson's correlation coefficient for x and y: ",
+        np.corrcoef(x_values, y_values)[0][1],
+        "\n\n",
+        "Pearson's correlation coefficient for epsilon and z: ",
+        np.corrcoef(epsilon_values, z_values)[0][1],
+        "\n\n",
+        f"Average MSE: {np.mean(mse_values)} \n",
+        f"Average Epsilon: {np.mean(epsilon_values)} \n",
+        f"Average X: {np.mean(x_values)} \n",
+        f"Average Y: {np.mean(y_values)} \n",
+        f"Average Z: {np.mean(z_values)} \n",
     )
 
 
@@ -1007,35 +1013,49 @@ def compute_one_way_ANOVA_for_values(
     starting_column: int,
     num_rows: int,
     num_columns: int,
-) -> None:
+) -> Tuple[float, float]:
+    """
+    Computes the one way ANOVA for the values in the given range of the
+    given worksheet.
+
+    Args:
+        workbook_sheet (openpyxl.worksheet.worksheet.Worksheet):
+            The worksheet
+
+        starting_row (int): The row to start reading from
+        starting_column (int): The column to start reading from
+        num_rows (int): The number of rows to read
+        num_columns (int): The number of columns to read
+
+    Returns:
+        Tuple[float, float]: The F value and the p value
+    """
     from scipy.stats import f_oneway
 
-    data = []
-    for i in range(num_columns):
-        data.append(
+    return f_oneway(
+        *[
             [
                 workbook_sheet.cell(
                     row=j + starting_row, column=i + starting_column
                 ).value
                 for j in range(num_rows)
             ]
-        )
-    print(data)
-    print(f_oneway(*data))
+            for i in range(num_columns)
+        ]
+    )
 
 
 def main():
     """
     Main function.
     """
-    compute_one_way_ANOVA_for_values(
-        workbook_sheet=open_workbook_sheet(
-            "results/probability_data_theta_and_phi.xlsx"
-        ),
-        starting_row=46,
-        starting_column=3,
-        num_rows=10,
-        num_columns=10,
+    print_stats_metrics_init_data(
+        list_of_init_json_file_names=[
+            "results/ibmq_quito_epsilon_init_map.json",
+            "results/ibmq_quito_x_init_map.json",
+            "results/ibmq_quito_y_init_map.json",
+            "results/ibmq_quito_z_init_map.json",
+        ]
     )
 
 
