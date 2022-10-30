@@ -924,6 +924,28 @@ def use_pso_to_minimum_error_for_various_qubit_initialisations() -> None:
     )
 
 
+def use_bayes_to_minimise_error_for_various_qubit_initialisations() -> None:
+    SIMULATOR.append(return_specific_fake_backend("fake_quito"))
+
+    theta_values = np.linspace(0, np.pi, 100)
+    ideal_data = np.array([np.cos(theta / 2) ** 2 for theta in theta_values])
+
+    generic_bayes_optimiser_function(
+        wrapper_function=lambda **kwargs: -1
+        * pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error(
+            list_of_particle_params=[[value for value in kwargs.values()]],
+            ideal_data=ideal_data,
+            theta_values=theta_values,
+        ).item(),
+        pbounds={
+            "epsilon": (-np.pi / 10, np.pi / 10),
+            "nu": (-np.pi / 10, np.pi / 10),
+        },
+        init_points=20,
+        n_iter=200,
+    )
+
+
 def print_stats_metrics_init_data(
     list_of_init_json_file_names: List[str],
 ) -> None:
@@ -1056,14 +1078,7 @@ def main():
     """
     Main function.
     """
-    print_stats_metrics_init_data(
-        list_of_init_json_file_names=[
-            "results/ibmq_quito_epsilon_init_map.json",
-            "results/ibmq_quito_x_init_map.json",
-            "results/ibmq_quito_y_init_map.json",
-            "results/ibmq_quito_z_init_map.json",
-        ]
-    )
+    use_bayes_to_minimise_error_for_various_qubit_initialisations()
 
 
 if __name__ == "__main__":
