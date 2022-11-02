@@ -55,7 +55,7 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
     fig.suptitle(graph_details["title"], fontsize=title_size)
 
     probability_axis_data = [
-        sheet.cell(
+        workbook_sheet.cell(
             row=starting_row_in_spreadsheet + theta_index,
             column=starting_column_in_spreadsheet + phi_index,
         ).value
@@ -100,9 +100,9 @@ def draw_3d_graphs_for_various_qubit_initialisations_probability_data(
     ax.zaxis.set_rotate_label(False)
     ax.set_zlabel(
         graph_details["z_axis_label"],
-        fontsize=title_size - 1,
+        fontsize=title_size - 2,
         labelpad=labelpad,
-        rotation=89.00,
+        rotation=90,
     )
 
     fig.savefig(plot_name)
@@ -112,7 +112,7 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
     theta_values: np.ndarray,
     starting_row_in_spreadsheet: int,
     starting_column_in_spreadsheet: int,
-    workbook_name: str,
+    workbook_sheet: openpyxl.worksheet.worksheet.Worksheet,
     plot_name: str,
     graph_details: Dict[str, str],
     y_limit: float = 1.0,
@@ -120,16 +120,11 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
     """
     Draw graphs for various qubit initialisations
     """
-    import openpyxl
-
-    workbook = openpyxl.load_workbook(workbook_name)
-    sheet = workbook.active
-
     fig, ax = plt.subplots(figsize=(width, height))
     fig.suptitle(graph_details["title"], fontsize=title_size)
 
     probability_axis_data = [
-        sheet.cell(
+        workbook_sheet.cell(
             row=starting_row_in_spreadsheet + theta_index,
             column=starting_column_in_spreadsheet,
         ).value
@@ -166,10 +161,10 @@ def draw_2d_graphs_for_various_qubit_initialisations_probability_data(
     box = ax.get_position()
     ax.set_position(
         [
-            box.x0 + box.width * 0.05,
+            box.x0 + box.width * 0.04,
             box.y0 + box.height * 0.05,
             box.width * 1.00,
-            box.height * 0.95,
+            box.height * 1.00,
         ]
     )
 
@@ -228,11 +223,36 @@ def line_plot_for_init_data():
         colour_map = {}
 
         graphing_data_map = {
-            "mse": {"data": [], "colour": "r", "name": "MSE"},
-            "epsilon_sol": {"data": [], "colour": "b", "name": "epsilon"},
-            "x_sol": {"data": [], "colour": "c", "name": "x"},
-            "y_sol": {"data": [], "colour": "m", "name": "y"},
-            "z_sol": {"data": [], "colour": "y", "name": "z"},
+            "mse": {
+                "data": [],
+                "colour": "r",
+                "name": "MSE",
+                "symbol": r"$\left(p(0 \ | \ \theta) - \tilde{p}(0 \ | \ \theta)\right)^2$",
+            },
+            "epsilon_sol": {
+                "data": [],
+                "colour": "b",
+                "name": "epsilon",
+                "symbol": r"$\epsilon$",
+            },
+            "x_sol": {
+                "data": [],
+                "colour": "c",
+                "name": "x",
+                "symbol": r"$\textit{x}$",
+            },
+            "y_sol": {
+                "data": [],
+                "colour": "m",
+                "name": "y",
+                "symbol": r"$\textit{y}$",
+            },
+            "z_sol": {
+                "data": [],
+                "colour": "y",
+                "name": "z",
+                "symbol": r"$\textit{z}$",
+            },
         }
 
         for init_value in init_data:
@@ -261,7 +281,7 @@ def line_plot_for_init_data():
                 alpha=alpha_value,
             )
             colour_map.update(
-                {graph_info.get("name"): graph_info.get("colour")}
+                {graph_info.get("symbol"): graph_info.get("colour")}
             )
 
         plt.xticks(
@@ -280,9 +300,9 @@ def line_plot_for_init_data():
         ax.set_position(
             [
                 box.x0 - box.width * 0.0,
-                box.y0 + box.height * 0.175,
+                box.y0 + box.height * 0.25,
                 box.width * 1.0,
-                box.height * 0.825,
+                box.height * 0.85,
             ]
         )
 

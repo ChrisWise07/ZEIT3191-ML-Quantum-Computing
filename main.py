@@ -307,11 +307,11 @@ def pso_wrapper_for_mse_prob_distro_difference_for_minimising_simulation_error(
     """
     list_of_mse = []
 
-    for epsilon, mu in list_of_particle_params:
+    for epsilon, nu, mu in list_of_particle_params:
         particular_theta_values = theta_values + epsilon * (
             np.sin(theta_values / 2) ** 2
         )
-        particular_gate_rotation = mu + epsilon * (np.sin(mu / 2) ** 2)
+        particular_gate_rotation = nu + mu * (np.sin(nu / 2) ** 2)
 
         list_of_mse.append(
             calculate_mse_between_two_distributions(
@@ -840,19 +840,29 @@ def graphing_probability_data() -> None:
     theta_string = r"$\theta$"
     phi_string = r"$\phi$"
     zero_ket_string = r"$0$"
+    three_d_probability_string = (
+        r"$\hat{\hspace{-1.65px}\tilde{p}}(0 \ | \ \theta \land \phi)$"
+    )
+    two_d_probability_string = (
+        r"$\hat{\hspace{-1.65px}\tilde{p}}(0 \ | \ \theta)$"
+    )
+    three_d_squared_error_string = r"$\left(p(0 \ | \ \theta \land \phi) - \hat{\hspace{-1.65px}\tilde{p}}(0 \ | \ \theta \land \phi)\right)^2$"
+    two_d_squared_error_string = r"$\left(p(0 \ | \ \theta) - \hat{\hspace{-1.65px}\tilde{p}}(0 \ | \ \theta)\right)^2$"
 
     draw_3d_graphs_for_various_qubit_initialisations_probability_data(
         theta_values=np.linspace(0, np.pi, 10),
         phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
         starting_row_in_spreadsheet=18,
         starting_column_in_spreadsheet=3,
-        workbook_name="results/probability_data_theta_and_phi.xlsx",
+        workbook_sheet=open_workbook_sheet(
+            "results/probability_data_theta_and_phi.xlsx"
+        ),
         plot_name="results/probability_over_theta_and_phi.pdf",
         graph_details={
             "title": f"Probability of measuring {zero_ket_string} for various {theta_string} and {phi_string} values",
             "x_axis_label": theta_string,
             "y_axis_label": phi_string,
-            "z_axis_label": f"Probability of measuring {zero_ket_string}",
+            "z_axis_label": three_d_probability_string,
         },
     )
 
@@ -861,13 +871,15 @@ def graphing_probability_data() -> None:
         phi_values=np.linspace(0, 2 * np.pi, 10, endpoint=False),
         starting_row_in_spreadsheet=46,
         starting_column_in_spreadsheet=3,
-        workbook_name="results/probability_data_theta_and_phi.xlsx",
+        workbook_sheet=open_workbook_sheet(
+            "results/probability_data_theta_and_phi.xlsx"
+        ),
         plot_name="results/probability_error_data_over_theta_and_phi.pdf",
         graph_details={
             "title": f"Sqaured Error for various {theta_string} and {phi_string} values",
             "x_axis_label": theta_string,
             "y_axis_label": phi_string,
-            "z_axis_label": f"Sqaured Error",
+            "z_axis_label": three_d_squared_error_string,
         },
         z_limit=0.003,
     )
@@ -876,12 +888,14 @@ def graphing_probability_data() -> None:
         theta_values=np.linspace(0, np.pi, 100),
         starting_row_in_spreadsheet=2,
         starting_column_in_spreadsheet=3,
-        workbook_name="results/probability_data_only_theta.xlsx",
+        workbook_sheet=open_workbook_sheet(
+            "results/probability_data_only_theta.xlsx"
+        ),
         plot_name="results/probability_over_theta.pdf",
         graph_details={
             "title": f"Probability of measuring {zero_ket_string} for various {theta_string} values",
             "x_axis_label": theta_string,
-            "y_axis_label": f"Probability of measuring {zero_ket_string}",
+            "y_axis_label": two_d_probability_string,
         },
     )
 
@@ -889,12 +903,14 @@ def graphing_probability_data() -> None:
         theta_values=np.linspace(0, np.pi, 100),
         starting_row_in_spreadsheet=2,
         starting_column_in_spreadsheet=5,
-        workbook_name="results/probability_data_only_theta.xlsx",
+        workbook_sheet=open_workbook_sheet(
+            "results/probability_data_only_theta.xlsx"
+        ),
         plot_name="results/probability_error_data_only_theta.pdf",
         graph_details={
             "title": f"Sqaured Error for various {theta_string} values",
             "x_axis_label": theta_string,
-            "y_axis_label": f"Mean Sqaured Error",
+            "y_axis_label": two_d_squared_error_string,
         },
         y_limit=0.003,
     )
@@ -938,8 +954,9 @@ def use_bayes_to_minimise_error_for_various_qubit_initialisations() -> None:
             theta_values=theta_values,
         ).item(),
         pbounds={
-            "epsilon": (-np.pi / 10, np.pi / 10),
-            "nu": (-np.pi / 10, np.pi / 10),
+            "epsilon": (-np.pi, np.pi),
+            "nu": (-np.pi, np.pi),
+            "mu": (-np.pi, np.pi),
         },
         init_points=20,
         n_iter=200,
@@ -1078,7 +1095,7 @@ def main():
     """
     Main function.
     """
-    use_bayes_to_minimise_error_for_various_qubit_initialisations()
+    line_plot_for_init_data()
 
 
 if __name__ == "__main__":
